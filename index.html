@@ -148,7 +148,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 .dtable tr:last-child td{border-bottom:none}
 .dtable tr.cat-row{cursor:pointer;transition:background .15s}
 .dtable tr.cat-row:hover{background:var(--s1)}
-.dtable tr.sub-row{background:#FAFCFF}
+.dtable tr.sub-row{background:#FAFCFF;display:none}
 .dtable tr.sub-row td{padding:6px 12px 6px 32px;font-size:12px;color:var(--sub);border-bottom:1px solid var(--border)}
 .cat-arrow{font-size:12px;color:var(--hint);margin-right:4px;display:inline-block;transition:transform .2s}
 .dbar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;min-width:40px}
@@ -1328,10 +1328,29 @@ async function renderRel(){
       Object.entries(byM).sort((a,b)=>b[0].localeCompare(a[0])).map(([k,v])=>{const[yr,mo]=k.split('-');const s=v.e-v.s;return `<tr class="rel-row"><td><strong>${MONTHS[parseInt(mo)-1]} ${yr}</strong></td><td class="vpos">${fmt(v.e)}</td><td class="vneg">${fmt(v.s)}</td><td style="text-align:right"><span class="${s>=0?'vpos':'vneg'}">${fmt(s)}</span> <span style="font-size:10px;color:var(--hint)">${s>=0?'Superávit':'Déficit'}</span></td></tr>`;}).join('')
     }</tbody></table>`:'<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Sem dados</div></div>';
   }else if(relTabV==='cats'){
-    const cats={};lancs.filter(l=>l.tipo==='saida').forEach(l=>{cats[l.categoria]=(cats[l.categoria]||0)+Number(l.valor);});
-    const sc=Object.entries(cats).sort((a,b)=>b[1]-a[1]);const tot=sc.reduce((s,[,v])=>s+v,0);const mx=sc[0]?sc[0][1]:1;
-    el.innerHTML=sc.length?`<table class="dtable"><thead><tr><th>Categoria</th><th>Distribuição</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>${
-      sc.map(([cat,v],i)=>`<tr><td>${ICONS[cat]||'📦'} ${cat}</td><td><div class="dbar"><div class="dfill" style="width:${Math.round(v/mx*100)}%;background:${CCOLS[i%8]}"></div></div></td><td style="text-align:right" class="vneg">${fmt(v)}</td><td style="text-align:right;color:var(--sub)">${Math.round(v/tot*100)}%</td></tr>`).join('')
+    const catMap={};lancs.filter(l=>l.tipo==='saida').forEach(l=>{
+      if(!catMap[l.categoria])catMap[l.categoria]={total:0,items:[]};
+      catMap[l.categoria].total+=Number(l.valor);
+      catMap[l.categoria].items.push(l);
+    });
+    const sc=Object.entries(catMap).sort((a,b)=>b[1].total-a[1].total);
+    const tot=sc.reduce((s,[,v])=>s+v.total,0);const mx=sc[0]?sc[0][1].total:1;
+    el.innerHTML=sc.length?`<table class="dtable"><thead><tr><th>Categoria</th><th>Distribuição</th><th style="text-align:center">Itens</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>${
+      sc.map(([cat,data],i)=>{
+        const subRows=data.items.sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>`<tr class="sub-row" data-cat="${cat.replace(/"/g,'')}-rel">
+          <td colspan="2" style="padding-left:32px;color:var(--sub)">${l.descricao} <span style="font-size:10px;color:var(--hint)">· ${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></td>
+          <td style="text-align:center;color:var(--hint);font-size:11px">${l.pagamento||'—'}</td>
+          <td style="text-align:right" class="vneg">${fmt(l.valor)}</td>
+          <td></td>
+        </tr>`).join('');
+        return `<tr class="cat-row" onclick="toggleRelCat('${cat.replace(/'/g,"\'")}')">
+          <td><span class="cat-arrow" id="arr-rel-${i}">›</span>${ICONS[cat]||'📦'} <strong>${cat}</strong></td>
+          <td><div class="dbar"><div class="dfill" style="width:${Math.round(data.total/mx*100)}%;background:${CCOLS[i%8]}"></div></div></td>
+          <td style="text-align:center"><span class="badge x">${data.items.length}</span></td>
+          <td style="text-align:right" class="vneg">${fmt(data.total)}</td>
+          <td style="text-align:right;color:var(--sub)">${Math.round(data.total/tot*100)}%</td>
+        </tr>${subRows}`;
+      }).join('')
     }</tbody></table>`:'<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Sem dados</div></div>';
   }else if(relTabV==='agencia'){
     const byM={};lancs.filter(l=>l.setor==='agencia').forEach(l=>{const k=l.data.substring(0,7);if(!byM[k])byM[k]={e:0,s:0};if(l.tipo==='entrada')byM[k].e+=Number(l.valor);else byM[k].s+=Number(l.valor);});
@@ -1340,12 +1359,53 @@ async function renderRel(){
     }</tbody></table>`:'<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Sem dados</div></div>';
   }else{
     // Pessoal
-    const cats={};lancs.filter(l=>l.tipo==='saida'&&l.setor==='pessoal').forEach(l=>{cats[l.categoria]=(cats[l.categoria]||0)+Number(l.valor);});
-    const sc=Object.entries(cats).sort((a,b)=>b[1]-a[1]);const tot=sc.reduce((s,[,v])=>s+v,0);const mx=sc[0]?sc[0][1]:1;
-    el.innerHTML=sc.length?`<table class="dtable"><thead><tr><th>Categoria</th><th>Distribuição</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>${
-      sc.map(([cat,v],i)=>`<tr><td>${ICONS[cat]||'📦'} ${cat}</td><td><div class="dbar"><div class="dfill" style="width:${Math.round(v/mx*100)}%;background:${CCOLS[i%8]}"></div></div></td><td style="text-align:right" class="vneg">${fmt(v)}</td><td style="text-align:right;color:var(--sub)">${Math.round(v/tot*100)}%</td></tr>`).join('')
+    const catMap2={};lancs.filter(l=>l.tipo==='saida'&&l.setor==='pessoal').forEach(l=>{
+      if(!catMap2[l.categoria])catMap2[l.categoria]={total:0,items:[]};
+      catMap2[l.categoria].total+=Number(l.valor);
+      catMap2[l.categoria].items.push(l);
+    });
+    const sc2=Object.entries(catMap2).sort((a,b)=>b[1].total-a[1].total);
+    const tot2=sc2.reduce((s,[,v])=>s+v.total,0);const mx2=sc2[0]?sc2[0][1].total:1;
+    el.innerHTML=sc2.length?`<table class="dtable"><thead><tr><th>Categoria</th><th>Distribuição</th><th style="text-align:center">Itens</th><th style="text-align:right">Total</th><th style="text-align:right">%</th></tr></thead><tbody>${
+      sc2.map(([cat,data],i)=>{
+        const subRows=data.items.sort((a,b)=>new Date(b.data)-new Date(a.data)).map(l=>`<tr class="sub-row" data-cat2="${cat.replace(/"/g,'')}-rel2">
+          <td colspan="2" style="padding-left:32px;color:var(--sub)">${l.descricao} <span style="font-size:10px;color:var(--hint)">· ${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span></td>
+          <td style="text-align:center;color:var(--hint);font-size:11px">${l.pagamento||'—'}</td>
+          <td style="text-align:right" class="vneg">${fmt(l.valor)}</td>
+          <td></td>
+        </tr>`).join('');
+        return `<tr class="cat-row" onclick="toggleRelCat2('${cat.replace(/'/g,"\'")}')">
+          <td><span class="cat-arrow" id="arr-rel2-${i}">›</span>${ICONS[cat]||'📦'} <strong>${cat}</strong></td>
+          <td><div class="dbar"><div class="dfill" style="width:${Math.round(data.total/mx2*100)}%;background:${CCOLS[i%8]}"></div></div></td>
+          <td style="text-align:center"><span class="badge x">${data.items.length}</span></td>
+          <td style="text-align:right" class="vneg">${fmt(data.total)}</td>
+          <td style="text-align:right;color:var(--sub)">${Math.round(data.total/tot2*100)}%</td>
+        </tr>${subRows}`;
+      }).join('')
     }</tbody></table>`:'<div class="empty"><div class="empty-ico">📊</div><div class="empty-txt">Sem dados</div></div>';
   }
+}
+function toggleRelCat(cat){
+  const rows=document.querySelectorAll(`tr[data-cat="${cat}-rel"]`);
+  const arr=document.querySelector(`[id^="arr-rel-"]`);
+  rows.forEach(r=>{r.style.display=r.style.display==='table-row'?'none':'table-row';});
+  // toggle arrow
+  document.querySelectorAll('.cat-row').forEach(tr=>{
+    if(tr.querySelector('strong')&&tr.querySelector('strong').textContent===cat){
+      const a=tr.querySelector('.cat-arrow');
+      if(a)a.style.transform=a.style.transform==='rotate(90deg)'?'':'rotate(90deg)';
+    }
+  });
+}
+function toggleRelCat2(cat){
+  const rows=document.querySelectorAll(`tr[data-cat2="${cat}-rel2"]`);
+  rows.forEach(r=>{r.style.display=r.style.display==='table-row'?'none':'table-row';});
+  document.querySelectorAll('.cat-row').forEach(tr=>{
+    if(tr.querySelector('strong')&&tr.querySelector('strong').textContent===cat){
+      const a=tr.querySelector('.cat-arrow');
+      if(a)a.style.transform=a.style.transform==='rotate(90deg)'?'':'rotate(90deg)';
+    }
+  });
 }
 function setRelTab(t,el){relTabV=t;document.querySelectorAll('#page-rel .fchip').forEach(e=>e.classList.remove('active'));el.classList.add('active');renderRel();}
 </script>
