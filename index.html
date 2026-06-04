@@ -289,6 +289,15 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 .icon-btn-sm.green{background:var(--gbg);border-color:var(--gbr);color:var(--g)}
 .icon-btn-sm.red{background:var(--rbg);border-color:var(--rbr);color:var(--r)}
 
+/* CAT ICO */
+.cat-ico{cursor:pointer;transition:transform .18s,box-shadow .18s}
+.cat-ico:hover{transform:scale(1.12);box-shadow:0 4px 12px rgba(0,0,0,.12)}
+.txrow:hover .cat-ico,.lrow:hover .cat-ico{transform:scale(1.08)}
+/* PROFILE */
+.profile-pic{border-radius:50%;object-fit:cover;border:2px solid var(--gbr)}
+.profile-upload{cursor:pointer;position:relative;display:inline-block}
+.profile-upload input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+
 /* MOBILE */
 .mob-topbar{display:none;height:52px;background:var(--white);border-bottom:1px solid var(--border);align-items:center;padding:0 14px;gap:10px;flex-shrink:0;box-shadow:var(--shadow)}
 .mob-brand{font-size:16px;font-weight:800;letter-spacing:-.4px}
@@ -344,13 +353,18 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     <div class="sb-section">Análise</div>
     <div class="sb-item" onclick="navTo('rel',this)" id="sbi-rel"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatórios</div>
   </div>
-  <div class="sb-bottom"><div class="sb-user"><div class="sb-ava">CR</div><div><div class="sb-uname">Carlos Riera</div><div class="sb-urole">Plano pessoal</div></div></div></div>
+  <div class="sb-bottom">
+    <div class="sb-user" style="cursor:pointer" onclick="openProfile()" title="Clique para alterar foto">
+      <div id="sb-ava-wrap"><div class="sb-ava" id="sb-ava-txt">CR</div></div>
+      <div><div class="sb-uname">Carlos Riera</div><div class="sb-urole" style="color:var(--g);font-size:10px">✏️ Editar perfil</div></div>
+    </div>
+  </div>
 </div>
 
 <!-- MAIN -->
 <div class="main-area">
   <div class="mob-topbar"><div class="mob-brand">Fin<em>Plane</em></div><div style="margin-left:auto;display:flex;gap:6px"><div class="tb-notif">🔔<div class="ndot" id="ndot2"></div></div></div></div>
-  <div class="topbar"><div class="topbar-title" id="ttitle">Dashboard</div><div style="margin-left:12px;font-size:12px;color:var(--sub);font-weight:500;white-space:nowrap" id="dt-display"></div><div class="tb-right"><div class="tb-notif">🔔<div class="ndot" id="ndot"></div></div><button class="tb-btn primary" onclick="openDr('lanc')">+ Lançamento</button></div></div>
+  <div class="topbar"><div class="topbar-title" id="ttitle">Dashboard</div><div style="margin-left:12px;font-size:12px;color:var(--sub);font-weight:500;white-space:nowrap" id="dt-display"></div><div class="tb-right"><div id="tb-profile" style="width:32px;height:32px;border-radius:50%;background:var(--gbg);border:1.5px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--g);cursor:pointer;overflow:hidden" onclick="openProfile()" title="Perfil">CR</div><div class="tb-notif">🔔<div class="ndot" id="ndot"></div></div><button class="tb-btn primary" onclick="openDr('lanc')">+ Lançamento</button></div></div>
   <div class="period-bar" id="pb-d">
     <button class="pchip" onclick="setRange('7d',this)">7 dias</button>
     <button class="pchip active" onclick="setRange('mes',this)">Este mês</button>
@@ -600,6 +614,32 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
   </div>
 </div>
 
+<!-- DRAWER PERFIL -->
+<div class="dr-bg" id="dr-profile" onclick="bgc(event,'dr-profile')">
+  <div class="dr" style="max-width:420px;margin:0 auto">
+    <div class="dr-handle"></div>
+    <h2>Meu perfil</h2>
+    <div style="display:flex;flex-direction:column;align-items:center;margin-bottom:24px;gap:12px">
+      <div style="position:relative">
+        <div id="profile-preview" style="width:90px;height:90px;border-radius:50%;background:var(--gbg);border:3px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-size:32px;font-weight:800;color:var(--g);overflow:hidden;font-family:'Inter',sans-serif">CR</div>
+        <label style="position:absolute;bottom:0;right:0;background:var(--g);width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #fff;font-size:14px" title="Trocar foto">
+          📷<input type="file" accept="image/*" style="display:none" onchange="uploadProfilePic(this)">
+        </label>
+      </div>
+      <div style="text-align:center">
+        <div style="font-size:16px;font-weight:700">Carlos Riera</div>
+        <div style="font-size:12px;color:var(--sub)">carlosriera1996@gmail.com</div>
+      </div>
+    </div>
+    <div style="background:var(--s1);border-radius:12px;padding:14px;margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:10px">Dicas</div>
+      <div style="font-size:12px;color:var(--sub);line-height:1.6">📸 Clique no ícone da câmera para trocar a foto<br>💾 A foto fica salva no dispositivo<br>🔄 Para remover, clique em "Remover foto"</div>
+    </div>
+    <button class="sbtn" onclick="closeDr('dr-profile')">Fechar</button>
+    <button class="cbtn" onclick="removeProfilePic()" style="color:var(--r);border-color:var(--rbr)">🗑️ Remover foto</button>
+  </div>
+</div>
+
 <!-- MODAL CATEGORY DETAIL -->
 <div class="modal-bg" id="modal-cat" onclick="if(event.target===this)closeCatModal()">
   <div class="modal">
@@ -615,6 +655,19 @@ const SK='sb_publishable_nw-Dwm5abX4jfdqWcb8Jqg_MuHGufZo';
 const PWD='riera96';
 const CATS=['Agência Plane','Carro','Supermercado','Comer fora','Combustível','Cartões','Contas','Dízimo','Emanuele','Farmácia','Viagem','Gastos Pessoais','Itens Casa','Oferta','Investimento','Salão','Educação','Outros'];
 const ICONS={'Agência Plane':'📱','Carro':'🚗','Supermercado':'🛒','Comer fora':'🍽️','Combustível':'⛽','Cartões':'💳','Contas':'📋','Dízimo':'🙏','Emanuele':'👶','Farmácia':'💊','Viagem':'✈️','Gastos Pessoais':'🛍️','Itens Casa':'🏠','Oferta':'🎁','Investimento':'💰','Salão':'💇','Educação':'🎓','Outros':'📦'};
+const CAT_COLORS={
+  'Agência Plane':'#6366F1','Carro':'#F59E0B','Supermercado':'#10B981','Comer fora':'#EF4444',
+  'Combustível':'#F97316','Cartões':'#8B5CF6','Contas':'#3B82F6','Dízimo':'#EC4899',
+  'Emanuele':'#06B6D4','Farmácia':'#14B8A6','Viagem':'#0EA5E9','Gastos Pessoais':'#F43F5E',
+  'Itens Casa':'#84CC16','Oferta':'#FBBF24','Investimento':'#22C55E','Salão':'#E879F9',
+  'Educação':'#6EE7B7','Outros':'#94A3B8'
+};
+function catIco(cat,size=36){
+  const color=CAT_COLORS[cat]||'#64748B';
+  const icon=ICONS[cat]||'📦';
+  const s=size+'px';
+  return `<div class="cat-ico" style="width:${s};height:${s};min-width:${s};background:${color}15;border:1.5px solid ${color}30;border-radius:${Math.round(size*.28)}px;display:flex;align-items:center;justify-content:center;font-size:${Math.round(size*.45)}px;transition:transform .2s">${icon}</div>`;
+}
 const CCOLS=['#16A34A','#2563EB','#D97706','#DC2626','#7C3AED','#0891B2','#EA580C','#DB2777'];
 const MONTHS=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
 const today=new Date();today.setHours(0,0,0,0);
@@ -684,6 +737,52 @@ function setRange(type,el){
   if(ap?.id==='page-lanc')renderLanc();
 }
 
+// ===== PROFILE =====
+function openProfile(){openDr('profile');}
+
+function uploadProfilePic(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const url=e.target.result;
+    localStorage.setItem('fp_profile_pic',url);
+    applyProfilePic(url);
+    toast('✓ Foto atualizada!');
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+
+function removeProfilePic(){
+  localStorage.removeItem('fp_profile_pic');
+  applyProfilePic(null);
+  toast('Foto removida');
+}
+
+function applyProfilePic(url){
+  // Sidebar
+  const sbWrap=document.getElementById('sb-ava-wrap');
+  // Topbar
+  const tbProf=document.getElementById('tb-profile');
+  // Drawer preview
+  const prev=document.getElementById('profile-preview');
+  
+  if(url){
+    const img=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    if(sbWrap)sbWrap.innerHTML=img;
+    if(tbProf)tbProf.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:50%">`;
+    if(prev)prev.innerHTML=`<img src="${url}" style="width:100%;height:100%;object-fit:cover">`;
+  }else{
+    if(sbWrap)sbWrap.innerHTML='<div class="sb-ava" id="sb-ava-txt">CR</div>';
+    if(tbProf)tbProf.innerHTML='CR';
+    if(prev)prev.innerHTML='CR';
+  }
+}
+
+function loadProfilePic(){
+  const url=localStorage.getItem('fp_profile_pic');
+  if(url)applyProfilePic(url);
+}
+
 function updateClock(){
   const now=new Date();
   const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -696,6 +795,7 @@ function init(){
   setRange('mes',document.querySelectorAll('.pchip')[1]);
   updateClock();
   setInterval(updateClock,1000);
+  loadProfilePic();
 }
 
 // When category changes, show client picker if entrada + Agência Plane
@@ -889,8 +989,8 @@ async function renderDash(){
   // RECENTES
   const rec=[...lancs].reverse().slice(0,8);
   document.getElementById('recent-list').innerHTML=rec.map(l=>`
-    <div class="txrow"><div class="txico ${l.tipo==='entrada'?'e':'s'}">${ICONS[l.categoria]||'📦'}</div>
-    <div class="txb"><div class="txdesc">${l.descricao}</div><div class="txmeta">${l.categoria||'—'}${l.pagamento?' · '+l.pagamento:''}</div></div>
+    <div class="txrow">${catIco(l.categoria,34)}
+    <div class="txb"><div class="txdesc">${l.descricao}</div><div class="txmeta" style="display:flex;align-items:center;gap:4px"><span style="background:${CAT_COLORS[l.categoria]||'#64748B'}20;color:${CAT_COLORS[l.categoria]||'#64748B'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600">${l.categoria||'—'}</span>${l.pagamento?' · '+l.pagamento:''}</div></div>
     <div class="txr"><div class="txval ${l.tipo==='entrada'?'g':'r'}">${l.tipo==='entrada'?'+':'-'}${fmt(l.valor)}</div><div class="txdate">${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</div></div>
     </div>`).join('')||'<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Sem transações</div></div>';
 
@@ -1050,8 +1150,8 @@ async function renderLanc(){
   document.getElementById('lanc-sub2').textContent=`${lancs.length} registros · ▲ ${fmt(ent)} · ▼ ${fmt(sai)}`;
   document.getElementById('lanc-chips').innerHTML=[['todos','Todos'],['entrada','↑ Entradas'],['saida','↓ Saídas']].map(([v,l])=>`<button class="fchip${lFilter===v?' active':''}" onclick="setLF('${v}')">${l}</button>`).join('');
   document.getElementById('lanc-list').innerHTML=lancs.length?lancs.map(l=>`
-    <div class="txrow"><div class="txico ${l.tipo==='entrada'?'e':'s'}">${ICONS[l.categoria]||'📦'}</div>
-    <div class="txb"><div class="txdesc">${l.descricao}</div><div class="txmeta">${l.categoria||'—'}${l.pagamento?' · '+l.pagamento:''} · ${l.setor==='agencia'?'Agência':'Pessoal'}</div></div>
+    <div class="txrow">${catIco(l.categoria,36)}
+    <div class="txb"><div class="txdesc">${l.descricao}</div><div class="txmeta" style="display:flex;align-items:center;gap:4px"><span style="background:${CAT_COLORS[l.categoria]||'#64748B'}20;color:${CAT_COLORS[l.categoria]||'#64748B'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600">${l.categoria||'—'}</span>${l.pagamento?' · '+l.pagamento:''} · ${l.setor==='agencia'?'Agência':'Pessoal'}</div></div>
     <div class="txr"><div class="txval ${l.tipo==='entrada'?'g':'r'}">${l.tipo==='entrada'?'+':'-'}${fmt(l.valor)}</div><div class="txdate">${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</div></div>
     <button class="ebtn" onclick='editLanc(${JSON.stringify(l).replace(/'/g,"\'")})' title="Editar">✏️</button>
     <button class="xbtn" onclick="delLanc('${l.id}')" title="Excluir">×</button>
