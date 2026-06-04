@@ -600,6 +600,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 <div class="dr-bg" id="dr-conta" onclick="bgc(event,'dr-conta')">
   <div class="dr" style="max-width:520px;margin:0 auto">
     <div class="dr-handle"></div><h2>Nova conta fixa</h2>
+    <input type="hidden" id="conta-edit-id">
     <div class="fgrp"><label class="flabel">Nome</label><input class="finput" type="text" id="ctn" placeholder="Ex: Cartão Itaú"></div>
     <div class="frow">
       <div class="fgrp"><label class="flabel">Valor (0 = variável)</label><input class="finput" type="number" id="ctv" step="0.01" inputmode="decimal" placeholder="0"></div>
@@ -837,7 +838,7 @@ async function renderDash(){
   const tMes=`${yAtual}-${String(mAtual+1).padStart(2,'0')}-${new Date(yAtual,mAtual+1,0).getDate()}`;
   try{
     [lancs,clientes,contas]=await Promise.all([
-      api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=data`),
+      api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=created_at.desc`),
       api('clientes?ativo=eq.true&order=nome'),
       api('contas_fixas?order=dia_vencimento')
     ]);
@@ -987,7 +988,7 @@ async function renderDash(){
   }).join('')||'<div class="empty"><div class="empty-ico">👥</div><div class="empty-txt">Sem clientes</div></div>';
 
   // RECENTES
-  const rec=[...lancs].reverse().slice(0,8);
+  const rec=lancs.slice(0,8);
   document.getElementById('recent-list').innerHTML=rec.map(l=>`
     <div class="txrow">${catIco(l.categoria,34)}
     <div class="txb"><div class="txdesc">${l.descricao}</div><div class="txmeta" style="display:flex;align-items:center;gap:4px"><span style="background:${CAT_COLORS[l.categoria]||'#64748B'}20;color:${CAT_COLORS[l.categoria]||'#64748B'};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:600">${l.categoria||'—'}</span>${l.pagamento?' · '+l.pagamento:''}</div></div>
@@ -1350,9 +1351,10 @@ async function renderContas(){
     else{badge=`<span class="badge x">Dia ${d} · ${new Date(y2,m2,d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>`;ok++;}
     const bg=isPaid?'var(--gbg)':diff<0?'var(--rbg)':diff<=5?'var(--abg)':'var(--s1)';
     return `<div class="txrow">
-      <div class="txico s" style="background:${bg}">${ICONS[ct.categoria]||'📋'}</div>
+      ${catIco(ct.categoria,34)}
       <div class="txb"><div class="txdesc">${ct.nome}</div><div class="txmeta">${ct.categoria||''} · ${ct.valor>0?fmt(ct.valor)+' fixo':'valor variável'}</div></div>
       <div class="txr"><div class="txval" style="color:var(--text)">${ct.valor>0?fmt(ct.valor):'—'}</div><div style="margin-top:3px">${badge}</div></div>
+      <button class="ebtn" onclick='editConta(${JSON.stringify(ct).replace(/'/g,"\'")} )' title="Editar">✏️</button>
       <button class="xbtn" onclick="delConta('${ct.id}')">×</button>
     </div>`;
   };
@@ -1371,12 +1373,34 @@ async function renderContas(){
   if(elAg)elAg.innerHTML=agencia.length?agencia.map(makeRow).join(''):'<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Sem contas da agência</div></div>';
   if(elPes)elPes.innerHTML=pessoal.length?pessoal.map(makeRow).join(''):'<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Sem contas pessoais</div></div>';
 }
+function editConta(ct){
+  document.getElementById('dr-conta').querySelector('h2').textContent='Editar conta';
+  document.getElementById('conta-edit-id').value=ct.id;
+  document.getElementById('ctn').value=ct.nome||'';
+  document.getElementById('ctv').value=ct.valor||0;
+  document.getElementById('ctd').value=ct.dia_vencimento||0;
+  document.getElementById('ctcat').value=ct.categoria||'';
+  document.getElementById('ctset').value=ct.setor||'pessoal';
+  openDr('conta');
+}
+
 async function saveConta(){
   const nome=document.getElementById('ctn').value.trim();if(!nome){toast('Informe o nome','err');return;}
+  const editId=document.getElementById('conta-edit-id').value;
+  const payload={nome,valor:parseFloat(document.getElementById('ctv').value)||0,dia_vencimento:parseInt(document.getElementById('ctd').value)||0,categoria:document.getElementById('ctcat').value,setor:document.getElementById('ctset').value};
   try{
-    await api('contas_fixas',{method:'POST',body:JSON.stringify({nome,valor:parseFloat(document.getElementById('ctv').value)||0,dia_vencimento:parseInt(document.getElementById('ctd').value)||0,categoria:document.getElementById('ctcat').value,setor:document.getElementById('ctset').value})});
-    toast('✓ Conta salva!');closeDr('dr-conta');renderContas();
-  }catch(e){toast('Erro','err');}
+    if(editId){
+      const r=await fetch(SB+'/rest/v1/contas_fixas?id=eq.'+editId,{method:'PATCH',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
+      if(!r.ok)throw new Error(await r.text());
+      toast('✓ Conta atualizada!');
+    }else{
+      await api('contas_fixas',{method:'POST',body:JSON.stringify(payload)});
+      toast('✓ Conta salva!');
+    }
+    document.getElementById('conta-edit-id').value='';
+    document.getElementById('dr-conta').querySelector('h2').textContent='Nova conta fixa';
+    closeDr('dr-conta');renderContas();
+  }catch(e){toast('Erro: '+e.message,'err');}
 }
 async function delConta(id){
   if(!confirm('Excluir?'))return;
