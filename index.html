@@ -293,6 +293,16 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 .cat-ico{cursor:pointer;transition:transform .18s,box-shadow .18s}
 .cat-ico:hover{transform:scale(1.12);box-shadow:0 4px 12px rgba(0,0,0,.12)}
 .txrow:hover .cat-ico,.lrow:hover .cat-ico{transform:scale(1.08)}
+/* SUGGESTIONS */
+#suggestions-box .sug-item{padding:11px 14px;cursor:pointer;font-size:13px;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .12s}
+#suggestions-box .sug-item:last-child{border-bottom:none}
+#suggestions-box .sug-item:hover,#suggestions-box .sug-item.active{background:var(--gbg)}
+#suggestions-box .sug-ico{font-size:16px;flex-shrink:0}
+#suggestions-box .sug-text{flex:1;min-width:0}
+#suggestions-box .sug-desc{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#suggestions-box .sug-meta{font-size:11px;color:var(--sub);margin-top:1px}
+#suggestions-box .sug-val{font-size:12px;font-weight:700;color:var(--sub);font-family:'JetBrains Mono',monospace;flex-shrink:0}
+
 /* PROFILE */
 .profile-pic{border-radius:50%;object-fit:cover;border:2px solid var(--gbr)}
 .profile-upload{cursor:pointer;position:relative;display:inline-block}
@@ -554,7 +564,15 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
       </div>
     </div>
     <div id="desc-wrap">
-      <div class="fgrp"><label class="flabel">Descrição</label><input class="finput" type="text" id="ldesc" placeholder="Ex: Supermercado Gricki"></div>
+      <div class="fgrp" style="position:relative">
+        <label class="flabel">Descrição</label>
+        <input class="finput" type="text" id="ldesc" placeholder="Ex: Supermercado Gricki" autocomplete="off"
+          oninput="showSuggestions(this.value)"
+          onkeydown="handleSuggestKey(event)"
+          onfocus="showSuggestions(this.value)"
+          onblur="setTimeout(hideSuggestions,180)">
+        <div id="suggestions-box" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--white);border:1.5px solid var(--g);border-radius:0 0 10px 10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:200;max-height:220px;overflow-y:auto"></div>
+      </div>
     </div>
     <div class="frow">
       <div class="fgrp"><label class="flabel">Categoria</label><select class="finput" id="lcat" onchange="onCatChange()"></select></div>
@@ -654,7 +672,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 const SB='https://rqaukhipjdyonkgehphl.supabase.co';
 const SK='sb_publishable_nw-Dwm5abX4jfdqWcb8Jqg_MuHGufZo';
 const PWD='riera96';
-const CATS=['Agência Plane','Carro','Supermercado','Comer fora','Combustível','Cartões','Contas','Dízimo','Emanuele','Farmácia','Viagem','Gastos Pessoais','Itens Casa','Oferta','Investimento','Salão','Educação','Outros'];
+const CATS=['Agência Plane','Carro','Cartões','Combustível','Comer fora','Contas','Dízimo','Educação','Emanuele','Farmácia','Gastos Pessoais','Investimento','Itens Casa','Oferta','Salão','Supermercado','Viagem','Outros'];
 const ICONS={'Agência Plane':'📱','Carro':'🚗','Supermercado':'🛒','Comer fora':'🍽️','Combustível':'⛽','Cartões':'💳','Contas':'📋','Dízimo':'🙏','Emanuele':'👶','Farmácia':'💊','Viagem':'✈️','Gastos Pessoais':'🛍️','Itens Casa':'🏠','Oferta':'🎁','Investimento':'💰','Salão':'💇','Educação':'🎓','Outros':'📦'};
 const CAT_COLORS={
   'Agência Plane':'#6366F1','Carro':'#F59E0B','Supermercado':'#10B981','Comer fora':'#EF4444',
@@ -782,6 +800,81 @@ function applyProfilePic(url){
 function loadProfilePic(){
   const url=localStorage.getItem('fp_profile_pic');
   if(url)applyProfilePic(url);
+}
+
+// ===== AUTOCOMPLETE =====
+let _sugHistory=[];
+let _sugIdx=-1;
+
+async function loadSugHistory(){
+  if(_sugHistory.length>0)return;
+  const all=await api('lancamentos?order=created_at.desc&limit=500').catch(()=>[]);
+  // Deduplicate by descricao, keep latest
+  const seen=new Set();
+  _sugHistory=[];
+  all.forEach(l=>{
+    const key=l.descricao.toLowerCase().trim();
+    if(!seen.has(key)){
+      seen.add(key);
+      _sugHistory.push(l);
+    }
+  });
+}
+
+function showSuggestions(val){
+  const box=document.getElementById('suggestions-box');
+  if(!box)return;
+  if(!val||val.trim().length<1){box.style.display='none';return;}
+  loadSugHistory().then(()=>{
+    const q=val.toLowerCase().trim();
+    const matches=_sugHistory.filter(l=>l.descricao.toLowerCase().includes(q)).slice(0,8);
+    if(!matches.length){box.style.display='none';return;}
+    _sugIdx=-1;
+    box.innerHTML=matches.map((l,i)=>`
+      <div class="sug-item" data-idx="${i}" 
+        onmousedown="selectSuggestion('${l.descricao.replace(/'/g,"\'")}','${l.categoria||''}','${l.pagamento||'Pix'}','${l.setor||'pessoal'}',${l.valor||0})">
+        <span class="sug-ico">${ICONS[l.categoria]||'📦'}</span>
+        <span class="sug-text">
+          <div class="sug-desc">${highlightMatch(l.descricao,val)}</div>
+          <div class="sug-meta">${l.categoria||'—'} · ${l.pagamento||'Pix'} · ${l.setor==='agencia'?'Agência':'Pessoal'}</div>
+        </span>
+        <span class="sug-val">${fmt(l.valor)}</span>
+      </div>`).join('');
+    box.style.display='block';
+  });
+}
+
+function highlightMatch(text,query){
+  const q=query.trim();
+  if(!q)return text;
+  const re=new RegExp('('+q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+')','gi');
+  return text.replace(re,'<mark style="background:rgba(22,163,74,.2);color:var(--g);border-radius:2px;font-weight:700">$1</mark>');
+}
+
+function selectSuggestion(desc,cat,pgto,setor,valor){
+  document.getElementById('ldesc').value=desc;
+  if(cat){document.getElementById('lcat').value=cat;}
+  if(pgto){document.getElementById('lpgto').value=pgto;}
+  if(setor){document.getElementById('lsetor').value=setor;}
+  if(valor&&valor>0){document.getElementById('lv').value=valor;}
+  hideSuggestions();
+  onCatChange();
+}
+
+function hideSuggestions(){
+  const box=document.getElementById('suggestions-box');
+  if(box)box.style.display='none';
+  _sugIdx=-1;
+}
+
+function handleSuggestKey(e){
+  const box=document.getElementById('suggestions-box');
+  if(!box||box.style.display==='none')return;
+  const items=box.querySelectorAll('.sug-item');
+  if(e.key==='ArrowDown'){e.preventDefault();_sugIdx=Math.min(_sugIdx+1,items.length-1);items.forEach((el,i)=>el.classList.toggle('active',i===_sugIdx));}
+  else if(e.key==='ArrowUp'){e.preventDefault();_sugIdx=Math.max(_sugIdx-1,0);items.forEach((el,i)=>el.classList.toggle('active',i===_sugIdx));}
+  else if(e.key==='Enter'&&_sugIdx>=0){e.preventDefault();items[_sugIdx].dispatchEvent(new Event('mousedown'));}
+  else if(e.key==='Escape'){hideSuggestions();}
 }
 
 function updateClock(){
@@ -1206,7 +1299,7 @@ async function saveLanc(){
     closeDr('dr-lanc');
     document.getElementById('lanc-edit-id').value='';
     document.getElementById('dr-lanc').querySelector('h2').textContent='Novo lançamento';
-    document.getElementById('ldesc').value='';document.getElementById('ldesc-manual').value='';document.getElementById('lv').value='';
+    document.getElementById('ldesc').value='';document.getElementById('ldesc-manual').value='';document.getElementById('lv').value='';_sugHistory=[];
     selectedCli=null;allLancs=null;
     if(document.getElementById('page-lanc').classList.contains('active'))renderLanc();
     if(document.getElementById('page-dash').classList.contains('active'))renderDash();
