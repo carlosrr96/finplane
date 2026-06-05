@@ -617,12 +617,28 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 <!-- DRAWER CONTA -->
 <div class="dr-bg" id="dr-conta" onclick="bgc(event,'dr-conta')">
   <div class="dr" style="max-width:520px;margin:0 auto">
-    <div class="dr-handle"></div><h2>Nova conta fixa</h2>
+    <div class="dr-handle"></div><h2 id="dr-conta-title">Nova conta fixa</h2>
     <input type="hidden" id="conta-edit-id">
-    <div class="fgrp"><label class="flabel">Nome</label><input class="finput" type="text" id="ctn" placeholder="Ex: Cartão Itaú"></div>
+    <div class="fgrp"><label class="flabel">Nome / Descrição</label><input class="finput" type="text" id="ctn" placeholder="Ex: Cama box, Cartão Itaú"></div>
     <div class="frow">
-      <div class="fgrp"><label class="flabel">Valor (0 = variável)</label><input class="finput" type="number" id="ctv" step="0.01" inputmode="decimal" placeholder="0"></div>
-      <div class="fgrp"><label class="flabel">Dia vencimento</label><input class="finput" type="number" id="ctd" min="0" max="31" inputmode="numeric"></div>
+      <div class="fgrp"><label class="flabel">Valor da parcela R$</label><input class="finput" type="number" id="ctv" step="0.01" inputmode="decimal" placeholder="0,00"></div>
+      <div class="fgrp"><label class="flabel">Dia vencimento</label><input class="finput" type="number" id="ctd" min="0" max="31" inputmode="numeric" placeholder="Ex: 10"></div>
+    </div>
+    <!-- Parcelamento -->
+    <div style="background:var(--bbg);border:1.5px solid var(--bbr);border-radius:10px;padding:14px;margin-bottom:13px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--b)">💳 Parcelado?</div>
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--sub)">
+          <input type="checkbox" id="ct-parcelado" onchange="toggleParcelado()" style="width:16px;height:16px;accent-color:var(--b)"> Sim, é parcelado
+        </label>
+      </div>
+      <div id="parcelado-fields" style="display:none">
+        <div class="frow" style="margin-bottom:0">
+          <div class="fgrp" style="margin-bottom:0"><label class="flabel">Total de parcelas</label><input class="finput" type="number" id="ct-parcelas" min="2" max="120" inputmode="numeric" placeholder="Ex: 10" oninput="calcParcelaValor()"></div>
+          <div class="fgrp" style="margin-bottom:0"><label class="flabel">Valor total R$</label><input class="finput" type="number" id="ct-total" step="0.01" inputmode="decimal" placeholder="Ex: 3000,00" oninput="calcParcelaValor()"></div>
+        </div>
+        <div id="parcela-preview" style="margin-top:10px;padding:8px 12px;background:var(--white);border-radius:8px;font-size:12px;color:var(--b);font-weight:600;text-align:center;display:none"></div>
+      </div>
     </div>
     <div class="frow">
       <div class="fgrp"><label class="flabel">Categoria</label><select class="finput" id="ctcat"></select></div>
@@ -1295,6 +1311,8 @@ async function saveLanc(){
     }else{
       await api('lancamentos',{method:'POST',body:JSON.stringify(payload)});
       toast('✓ Lançamento salvo!');
+      // Check if this payment matches a parceled conta
+      if(payload.tipo==='saida')await checkParcelasAfterPayment(payload.descricao);
     }
     closeDr('dr-lanc');
     document.getElementById('lanc-edit-id').value='';
@@ -1443,9 +1461,30 @@ async function renderContas(){
     else if(diff<=5){badge=`<span class="badge a">Vence ${new Date(y2,m2,d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>`;prox++;}
     else{badge=`<span class="badge x">Dia ${d} · ${new Date(y2,m2,d).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</span>`;ok++;}
     const bg=isPaid?'var(--gbg)':diff<0?'var(--rbg)':diff<=5?'var(--abg)':'var(--s1)';
+    
+    // Parcelas info
+    const isParcelado=ct.parcelas_total>0;
+    const pgPagas=isPaid?ct.parcelas_pagas+1:ct.parcelas_pagas;
+    const parcelasBar=isParcelado?`
+      <div style="margin-top:6px">
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--sub);margin-bottom:3px">
+          <span>Parcela ${pgPagas}/${ct.parcelas_total}</span>
+          <span>${ct.parcelas_total-pgPagas} restantes</span>
+        </div>
+        <div style="height:4px;background:var(--border);border-radius:2px;overflow:hidden">
+          <div style="height:100%;background:var(--b);border-radius:2px;width:${Math.round(pgPagas/ct.parcelas_total*100)}%;transition:width .5s"></div>
+        </div>
+      </div>`:'';
+    
+    const nomeDisplay=isParcelado?`${ct.nome_original||ct.nome} <span style="font-size:11px;background:var(--bbg);color:var(--b);padding:1px 6px;border-radius:4px;font-weight:700">${pgPagas}/${ct.parcelas_total}x</span>`:ct.nome;
+    
     return `<div class="txrow">
       ${catIco(ct.categoria,34)}
-      <div class="txb"><div class="txdesc">${ct.nome}</div><div class="txmeta">${ct.categoria||''} · ${ct.valor>0?fmt(ct.valor)+' fixo':'valor variável'}</div></div>
+      <div class="txb">
+        <div class="txdesc">${nomeDisplay}</div>
+        <div class="txmeta">${ct.categoria||''} · ${ct.valor>0?fmt(ct.valor)+'/parcela':'valor variável'}</div>
+        ${parcelasBar}
+      </div>
       <div class="txr"><div class="txval" style="color:var(--text)">${ct.valor>0?fmt(ct.valor):'—'}</div><div style="margin-top:3px">${badge}</div></div>
       <button class="ebtn" onclick='editConta(${JSON.stringify(ct).replace(/'/g,"\'")} )' title="Editar">✏️</button>
       <button class="xbtn" onclick="delConta('${ct.id}')">×</button>
@@ -1466,21 +1505,56 @@ async function renderContas(){
   if(elAg)elAg.innerHTML=agencia.length?agencia.map(makeRow).join(''):'<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Sem contas da agência</div></div>';
   if(elPes)elPes.innerHTML=pessoal.length?pessoal.map(makeRow).join(''):'<div class="empty"><div class="empty-ico">📋</div><div class="empty-txt">Sem contas pessoais</div></div>';
 }
+function toggleParcelado(){
+  const checked=document.getElementById('ct-parcelado').checked;
+  document.getElementById('parcelado-fields').style.display=checked?'block':'none';
+  if(!checked)document.getElementById('parcela-preview').style.display='none';
+}
+
+function calcParcelaValor(){
+  const n=parseInt(document.getElementById('ct-parcelas').value)||0;
+  const total=parseFloat(document.getElementById('ct-total').value)||0;
+  const prev=document.getElementById('parcela-preview');
+  const vinput=document.getElementById('ctv');
+  if(n>0&&total>0){
+    const parcela=total/n;
+    vinput.value=parcela.toFixed(2);
+    prev.textContent=`${n}x de ${fmt(parcela)} = ${fmt(total)} no total`;
+    prev.style.display='block';
+  }else{
+    prev.style.display='none';
+  }
+}
+
 function editConta(ct){
-  document.getElementById('dr-conta').querySelector('h2').textContent='Editar conta';
+  document.getElementById('dr-conta-title').textContent='Editar conta';
   document.getElementById('conta-edit-id').value=ct.id;
   document.getElementById('ctn').value=ct.nome||'';
   document.getElementById('ctv').value=ct.valor||0;
   document.getElementById('ctd').value=ct.dia_vencimento||0;
   document.getElementById('ctcat').value=ct.categoria||'';
   document.getElementById('ctset').value=ct.setor||'pessoal';
+  // Reset parcelado
+  document.getElementById('ct-parcelado').checked=false;
+  document.getElementById('parcelado-fields').style.display='none';
   openDr('conta');
 }
 
 async function saveConta(){
   const nome=document.getElementById('ctn').value.trim();if(!nome){toast('Informe o nome','err');return;}
   const editId=document.getElementById('conta-edit-id').value;
-  const payload={nome,valor:parseFloat(document.getElementById('ctv').value)||0,dia_vencimento:parseInt(document.getElementById('ctd').value)||0,categoria:document.getElementById('ctcat').value,setor:document.getElementById('ctset').value};
+  const isParcelado=document.getElementById('ct-parcelado').checked;
+  const nParcelas=parseInt(document.getElementById('ct-parcelas').value)||0;
+  const valor=parseFloat(document.getElementById('ctv').value)||0;
+  const payload={
+    nome,valor,
+    dia_vencimento:parseInt(document.getElementById('ctd').value)||0,
+    categoria:document.getElementById('ctcat').value,
+    setor:document.getElementById('ctset').value,
+    parcelas_total:isParcelado&&nParcelas>0?nParcelas:0,
+    parcelas_pagas:0,
+    nome_original:isParcelado?nome:null
+  };
   try{
     if(editId){
       const r=await fetch(SB+'/rest/v1/contas_fixas?id=eq.'+editId,{method:'PATCH',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
@@ -1491,7 +1565,11 @@ async function saveConta(){
       toast('✓ Conta salva!');
     }
     document.getElementById('conta-edit-id').value='';
-    document.getElementById('dr-conta').querySelector('h2').textContent='Nova conta fixa';
+    document.getElementById('dr-conta-title').textContent='Nova conta fixa';
+    document.getElementById('ct-parcelado').checked=false;
+    document.getElementById('parcelado-fields').style.display='none';
+    document.getElementById('ct-parcelas').value='';
+    document.getElementById('ct-total').value='';
     closeDr('dr-conta');renderContas();
   }catch(e){toast('Erro: '+e.message,'err');}
 }
@@ -1624,6 +1702,27 @@ function toggleRelCat2(cat){
     }
   });
 }
+async function checkParcelasAfterPayment(descricao){
+  // Find matching parcelada conta
+  const contas=await api('contas_fixas?parcelas_total=gt.0').catch(()=>[]);
+  const nome=descricao.toLowerCase().trim();
+  for(const ct of contas){
+    if(nome.includes(ct.nome.toLowerCase().trim())||ct.nome.toLowerCase().trim().includes(nome)){
+      const novasPagas=ct.parcelas_pagas+1;
+      if(novasPagas>=ct.parcelas_total){
+        // Última parcela — remove a conta
+        await fetch(SB+'/rest/v1/contas_fixas?id=eq.'+ct.id,{method:'DELETE',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Prefer':'return=minimal'}});
+        toast(`🎉 ${ct.nome_original||ct.nome} — última parcela paga! Conta removida.`);
+      }else{
+        // Incrementa parcelas pagas
+        await fetch(SB+'/rest/v1/contas_fixas?id=eq.'+ct.id,{method:'PATCH',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify({parcelas_pagas:novasPagas})});
+        const restantes=ct.parcelas_total-novasPagas;
+        toast(`💳 ${ct.nome_original||ct.nome}: parcela ${novasPagas}/${ct.parcelas_total} — faltam ${restantes}!`);
+      }
+    }
+  }
+}
+
 function setRelTab(t,el){relTabV=t;document.querySelectorAll('#page-rel .fchip').forEach(e=>e.classList.remove('active'));el.classList.add('active');renderRel();}
 </script>
 </body>
