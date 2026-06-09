@@ -343,6 +343,9 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     <div class="ltitle">Fin<em>Plane</em></div>
     <p class="lsub">Sistema de gestão financeira</p>
     <input class="linput" type="password" id="pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:var(--sub);margin-bottom:16px;cursor:pointer;justify-content:center">
+      <input type="checkbox" id="remember-me" style="width:15px;height:15px;accent-color:var(--g)"> Lembrar senha neste dispositivo
+    </label>
     <button class="lcta" onclick="doLogin()">Entrar →</button>
     <div class="lerr" id="lerr">Senha incorreta.</div>
   </div>
@@ -360,6 +363,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     <div class="sb-item" onclick="navTo('lanc',this)" id="sbi-lanc"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="12" y2="16"/></svg>Lançamentos</div>
     <div class="sb-item" onclick="navTo('cli',this)" id="sbi-cli"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75M21 21v-2a4 4 0 0 0-3-3.85"/></svg>Clientes</div>
     <div class="sb-item" onclick="navTo('contas',this)" id="sbi-contas"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>Contas fixas</div>
+    <div class="sb-item" onclick="navTo('cartoes',this)" id="sbi-cartoes"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cartões</div>
     <div class="sb-section">Análise</div>
     <div class="sb-item" onclick="navTo('rel',this)" id="sbi-rel"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatórios</div>
   </div>
@@ -373,7 +377,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 
 <!-- MAIN -->
 <div class="main-area">
-  <div class="mob-topbar"><div class="mob-brand">Fin<em>Plane</em></div><div style="margin-left:auto;display:flex;gap:6px"><div class="tb-notif">🔔<div class="ndot" id="ndot2"></div></div></div></div>
+  <div class="mob-topbar"><div class="mob-brand">Fin<em>Plane</em></div><div style="margin-left:8px;font-size:11px;color:var(--sub);font-weight:500" id="mob-datetime"></div><div style="margin-left:auto;display:flex;gap:6px"><div class="tb-notif">🔔<div class="ndot" id="ndot2"></div></div></div></div>
   <div class="topbar"><div class="topbar-title" id="ttitle">Dashboard</div><div style="margin-left:12px;font-size:12px;color:var(--sub);font-weight:500;white-space:nowrap" id="dt-display"></div><div class="tb-right"><div id="tb-profile" style="width:32px;height:32px;border-radius:50%;background:var(--gbg);border:1.5px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--g);cursor:pointer;overflow:hidden" onclick="openProfile()" title="Perfil">CR</div><div class="tb-notif">🔔<div class="ndot" id="ndot"></div></div><button class="tb-btn primary" onclick="openDr('lanc')">+ Lançamento</button></div></div>
   <div class="period-bar" id="pb-d">
     <button class="pchip" onclick="setRange('7d',this)">7 dias</button>
@@ -489,6 +493,13 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
       </div>
     </div>
 
+    <!-- CARTÕES -->
+    <div class="page" id="page-cartoes">
+      <div class="page-header"><div><h2>Cartões</h2><p>Faturas e gastos por cartão</p></div><button class="add-btn" onclick="openDr('add-cartao')">+ Novo cartão</button></div>
+      <div class="g4" id="cartoes-kpis"></div>
+      <div id="cartoes-content"></div>
+    </div>
+
     <!-- RELATÓRIOS -->
     <div class="page" id="page-rel">
       <div class="page-header"><div><h2>Relatórios</h2><p>Análise financeira completa</p></div></div>
@@ -552,7 +563,14 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     </div>
     <div class="frow">
       <div class="fgrp"><label class="flabel">Data</label><input class="finput" type="date" id="ld"></div>
-      <div class="fgrp"><label class="flabel">Valor R$</label><input class="finput" type="number" id="lv" step="0.01" inputmode="decimal" placeholder="0,00"></div>
+      <div class="fgrp"><label class="flabel">Valor</label>
+        <div style="position:relative">
+          <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--sub);font-weight:600;pointer-events:none">R$</span>
+          <input class="finput" type="text" id="lv" inputmode="numeric" placeholder="0,00" 
+            style="padding-left:34px;font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700"
+            oninput="maskCurrency(this)" onkeydown="if(event.key==='Backspace'&&this.value==='0,00')event.preventDefault()">
+        </div>
+      </div>
     </div>
     <!-- CLIENT PICKER (shown when entrada + Agência Plane) -->
     <div id="cli-picker-wrap" style="display:none">
@@ -582,6 +600,13 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     </div>
     <div class="fgrp"><label class="flabel">Setor</label>
       <select class="finput" id="lsetor"><option value="pessoal">Pessoal</option><option value="agencia">Agência Plane</option></select>
+    </div>
+    <div id="cartao-wrap" style="display:none">
+      <div class="fgrp"><label class="flabel">💳 Qual cartão?</label>
+        <select class="finput" id="lcartao">
+          <option value="">Selecionar cartão</option>
+        </select>
+      </div>
     </div>
     <button class="sbtn" onclick="saveLanc()">Salvar lançamento</button>
     <button class="cbtn" onclick="closeDr('dr-lanc')">Cancelar</button>
@@ -675,6 +700,29 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
   </div>
 </div>
 
+<!-- DRAWER NOVO CARTÃO -->
+<div class="dr-bg" id="dr-add-cartao" onclick="bgc(event,'dr-add-cartao')">
+  <div class="dr" style="max-width:420px;margin:0 auto">
+    <div class="dr-handle"></div><h2>Novo cartão</h2>
+    <div class="fgrp"><label class="flabel">Nome do cartão</label><input class="finput" type="text" id="novo-cartao-nome" placeholder="Ex: Cartão Nubank"></div>
+    <div class="frow">
+      <div class="fgrp"><label class="flabel">Dia vencimento</label><input class="finput" type="number" id="novo-cartao-dia" min="1" max="31" inputmode="numeric" placeholder="Ex: 10"></div>
+      <div class="fgrp"><label class="flabel">Cor (hex)</label>
+        <div style="display:flex;gap:8px;align-items:center">
+          <input class="finput" type="text" id="novo-cartao-cor" placeholder="#6366F1" style="flex:1" oninput="document.getElementById('cor-preview').style.background=this.value">
+          <div id="cor-preview" style="width:36px;height:36px;border-radius:8px;background:#6366F1;border:1.5px solid var(--border);flex-shrink:0"></div>
+        </div>
+      </div>
+    </div>
+    <!-- Cor presets -->
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px">
+      ${['#F97316','#2563EB','#111827','#00B1EA','#8B5CF6','#EC4899','#10B981','#EF4444','#F59E0B','#06B6D4'].map(cor=>`<div onclick="document.getElementById('novo-cartao-cor').value='${cor}';document.getElementById('cor-preview').style.background='${cor}'" style="width:28px;height:28px;border-radius:6px;background:${cor};cursor:pointer;border:2px solid transparent;transition:border-color .15s" onmouseover="this.style.borderColor='var(--border2)'" onmouseout="this.style.borderColor='transparent'"></div>`).join('')}
+    </div>
+    <button class="sbtn" onclick="saveNovoCartao()">Salvar cartão</button>
+    <button class="cbtn" onclick="closeDr('dr-add-cartao')">Cancelar</button>
+  </div>
+</div>
+
 <!-- MODAL CATEGORY DETAIL -->
 <div class="modal-bg" id="modal-cat" onclick="if(event.target===this)closeCatModal()">
   <div class="modal">
@@ -722,13 +770,24 @@ const api=async(p,o={})=>{
 };
 
 function doLogin(){
-  if(document.getElementById('pw').value===PWD){
-    document.getElementById('login').style.display='none';
-    document.getElementById('app').style.display='block';
-    document.getElementById('fab').style.display='flex';
-    init();
+  const pw=document.getElementById('pw').value;
+  if(pw===PWD){
+    if(document.getElementById('remember-me')?.checked){
+      localStorage.setItem('fp_remembered','1');
+    }
+    showApp();
   }else{document.getElementById('lerr').style.display='block';document.getElementById('pw').value='';}
 }
+function showApp(){
+  document.getElementById('login').style.display='none';
+  document.getElementById('app').style.display='block';
+  document.getElementById('fab').style.display='flex';
+  init();
+}
+// Auto-login if remembered
+window.addEventListener('DOMContentLoaded',()=>{
+  if(localStorage.getItem('fp_remembered')==='1'){showApp();}
+});
 
 function navTo(p,el){
   document.querySelectorAll('.sb-item,.mbtab').forEach(t=>t.classList.remove('active'));
@@ -740,10 +799,16 @@ function navTo(p,el){
   const tt=document.getElementById('ttitle');if(tt)tt.textContent={dash:'Dashboard',lanc:'Lançamentos',cli:'Clientes',contas:'Contas fixas',rel:'Relatórios'}[p]||p;
   const showP=['dash','lanc'].includes(p);
   ['pb-d','pb-m'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display=showP?'flex':'none';});
-  if(p==='dash')renderDash();if(p==='lanc')renderLanc();if(p==='cli')renderCli();if(p==='contas')renderContas();if(p==='rel')renderRel();
+  if(p==='dash')renderDash();if(p==='lanc')renderLanc();if(p==='cli')renderCli();if(p==='contas')renderContas();if(p==='rel')renderRel();if(p==='cartoes')renderCartoes();
 }
 
-function openDr(id){document.getElementById('dr-'+id).classList.add('open');}
+function openDr(id){
+  document.getElementById('dr-'+id).classList.add('open');
+  if(id==='lanc'&&!document.getElementById('lanc-edit-id').value){
+    // Reset form for new lancamento
+    document.getElementById('lv').value='0,00';
+  }
+}
 function closeDr(id){document.getElementById(id).classList.remove('open');}
 function bgc(e,id){if(e.target.classList.contains('dr-bg'))closeDr(id);}
 function setT(t){
@@ -813,6 +878,22 @@ function applyProfilePic(url){
   }
 }
 
+function maskCurrency(el){
+  let v=el.value.replace(/\D/g,'');
+  if(!v||v==='0'){el.value='0,00';return;}
+  v=v.replace(/^0+/,'');
+  if(v.length===0)v='0';
+  if(v.length===1)v='0,0'+v;
+  else if(v.length===2)v='0,'+v;
+  else v=v.slice(0,-2).replace(/\B(?=(\d{3})+(?!\d))/g,'.')+','+v.slice(-2);
+  el.value=v;
+}
+
+function getValorFloat(id){
+  const v=document.getElementById(id)?.value||'0';
+  return parseFloat(v.replace(/\./g,'').replace(',','.'))||0;
+}
+
 function loadProfilePic(){
   const url=localStorage.getItem('fp_profile_pic');
   if(url)applyProfilePic(url);
@@ -872,9 +953,12 @@ function selectSuggestion(desc,cat,pgto,setor,valor){
   if(cat){document.getElementById('lcat').value=cat;}
   if(pgto){document.getElementById('lpgto').value=pgto;}
   if(setor){document.getElementById('lsetor').value=setor;}
-  if(valor&&valor>0){document.getElementById('lv').value=valor;}
+  // Don't auto-fill value - user must type new value
+  document.getElementById('lv').value='';
   hideSuggestions();
   onCatChange();
+  // Focus value field
+  setTimeout(()=>document.getElementById('lv').focus(),100);
 }
 
 function hideSuggestions(){
@@ -895,14 +979,20 @@ function handleSuggestKey(e){
 
 function updateClock(){
   const now=new Date();
-  const dias=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const dias=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
+  const diasFull=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+  const time=now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  const date=now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'});
   const el=document.getElementById('dt-display');
-  if(el)el.textContent=dias[now.getDay()]+', '+now.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric'})+' · '+now.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
+  if(el)el.textContent=diasFull[now.getDay()]+', '+date+' · '+time;
+  const mel=document.getElementById('mob-datetime');
+  if(mel)mel.textContent=dias[now.getDay()]+' '+date.substring(0,5)+' · '+time.substring(0,5);
 }
 function init(){
   CATS.forEach(c=>{['lcat','ctcat'].forEach(id=>{const o=document.createElement('option');o.textContent=c;document.getElementById(id)?.appendChild(o);});});
   document.getElementById('ld').value=ds(today);
   setRange('mes',document.querySelectorAll('.pchip')[1]);
+  updateCartaoSelect();
   updateClock();
   setInterval(updateClock,1000);
   loadProfilePic();
@@ -915,6 +1005,10 @@ function onCatChange(){
   document.getElementById('cli-picker-wrap').style.display=isEntradaAgencia?'block':'none';
   document.getElementById('desc-wrap').style.display=isEntradaAgencia?'none':'block';
   if(isEntradaAgencia)loadCliPicker();
+  // Show cartao selector when categoria = Cartões
+  const isCartao=cat==='Cartões';
+  const cartaoWrap=document.getElementById('cartao-wrap');
+  if(cartaoWrap)cartaoWrap.style.display=isCartao?'block':'none';
 }
 
 async function loadCliPicker(){
@@ -966,7 +1060,7 @@ async function renderDash(){
 
   document.getElementById('hero-wrap').innerHTML=`
     <div class="hero-3" style="margin-bottom:14px">
-      <div class="hcard main">
+      <div class="hcard main" style="background:${sal>=0?'linear-gradient(135deg,var(--g) 0%,#15803D 100%)':'linear-gradient(135deg,#DC2626 0%,#B91C1C 100%)'}">
         <div class="hc-label">Saldo do período</div>
         <div class="hc-period">${rFrom.split('-').reverse().join('/')} — ${rTo.split('-').reverse().join('/')}</div>
         <div class="hc-val">${fmt(sal)}</div>
@@ -1287,7 +1381,7 @@ function editLanc(l){
 
 async function saveLanc(){
   const data=document.getElementById('ld').value;
-  const val=parseFloat(document.getElementById('lv').value);
+  const val=getValorFloat('lv');
   const cat=document.getElementById('lcat').value;
   const isEntradaAgencia=lTipo==='entrada'&&cat==='Agência Plane';
   let desc='';
@@ -1302,7 +1396,10 @@ async function saveLanc(){
   }
   if(!data||!val){toast('Preencha data e valor','err');return;}
   const editId=document.getElementById('lanc-edit-id').value;
-  const payload={data,descricao:desc,categoria:cat,pagamento:document.getElementById('lpgto').value,tipo:lTipo,valor:val,setor:document.getElementById('lsetor').value};
+  const cartao=document.getElementById('lcartao')?.value;
+  const descFinal=cat==='Cartões'&&cartao?`${desc} [${cartao}]`:desc;
+  const pgto=cat==='Cartões'&&cartao?cartao:document.getElementById('lpgto').value;
+  const payload={data,descricao:descFinal,categoria:cat,pagamento:pgto,tipo:lTipo,valor:val,setor:document.getElementById('lsetor').value};
   try{
     if(editId){
       const r=await fetch(SB+'/rest/v1/lancamentos?id=eq.'+editId,{method:'PATCH',headers:{'apikey':SK,'Authorization':'Bearer '+SK,'Content-Type':'application/json','Prefer':'return=minimal'},body:JSON.stringify(payload)});
@@ -1721,6 +1818,121 @@ async function checkParcelasAfterPayment(descricao){
       }
     }
   }
+}
+
+// ===== CARTÕES MANAGEMENT =====
+const DEFAULT_CARTOES=[
+  {nome:'Cartão Itaú',dia:15,cor:'#F97316'},
+  {nome:'Cartão Sicredi',dia:25,cor:'#2563EB'},
+  {nome:'Cartão C6',dia:20,cor:'#111827'},
+  {nome:'Cartão MercadoPago',dia:17,cor:'#00B1EA'}
+];
+
+function getCartoesList(){
+  const saved=localStorage.getItem('fp_cartoes');
+  return saved?JSON.parse(saved):DEFAULT_CARTOES;
+}
+function getCartoes(){return getCartoesList().map(c=>c.nome);}
+function getCartaoDias(){const m={};getCartoesList().forEach(c=>m[c.nome]=c.dia);return m;}
+function getCartaoColors(){const m={};getCartoesList().forEach(c=>m[c.nome]=c.cor);return m;}
+
+function saveNovoCartao(){
+  const nome=document.getElementById('novo-cartao-nome').value.trim();
+  const dia=parseInt(document.getElementById('novo-cartao-dia').value)||1;
+  const cor=document.getElementById('novo-cartao-cor').value||'#6366F1';
+  if(!nome){toast('Informe o nome do cartão','err');return;}
+  const lista=getCartoesList();
+  if(lista.find(c=>c.nome===nome)){toast('Cartão já existe','err');return;}
+  lista.push({nome,dia,cor});
+  localStorage.setItem('fp_cartoes',JSON.stringify(lista));
+  toast('✓ Cartão adicionado!');
+  closeDr('dr-add-cartao');
+  document.getElementById('novo-cartao-nome').value='';
+  document.getElementById('novo-cartao-dia').value='';
+  document.getElementById('novo-cartao-cor').value='';
+  updateCartaoSelect();
+  renderCartoes();
+}
+
+function removeCartao(nome){
+  if(!confirm(`Remover ${nome}?`))return;
+  const lista=getCartoesList().filter(c=>c.nome!==nome);
+  localStorage.setItem('fp_cartoes',JSON.stringify(lista));
+  toast('Cartão removido');
+  updateCartaoSelect();
+  renderCartoes();
+}
+
+function updateCartaoSelect(){
+  const sel=document.getElementById('lcartao');
+  if(!sel)return;
+  const lista=getCartoesList();
+  sel.innerHTML='<option value="">Selecionar cartão</option>'+lista.map(c=>`<option value="${c.nome}">${c.nome}</option>`).join('');
+}
+
+async function renderCartoes(){
+  const m2=today.getMonth(),y2=today.getFullYear();
+  const fMesC=`${y2}-${String(m2+1).padStart(2,'0')}-01`;
+  const tMesC=`${y2}-${String(m2+1).padStart(2,'0')}-${new Date(y2,m2+1,0).getDate()}`;
+  
+  const CARTOES=getCartoes();
+  const CARTAO_DIAS=getCartaoDias();
+  const CARTAO_COLORS=getCartaoColors();
+
+  // Get all saída lancamentos with pagamento = cartao name or descricao contains [Cartão X]
+  const lancs=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}&order=created_at.desc`).catch(()=>[]);
+  
+  const faturas={};
+  CARTOES.forEach(c=>{faturas[c]={items:[],total:0};});
+  
+  lancs.forEach(l=>{
+    // Check if pagamento matches a cartao
+    const cartaoByPgto=CARTOES.find(c=>l.pagamento===c);
+    // Check if descricao has [Cartão X]
+    const match=l.descricao.match(/\[(.+?)\]/);
+    const cartaoByDesc=match?CARTOES.find(c=>c===match[1]):null;
+    const cartao=cartaoByPgto||cartaoByDesc;
+    if(cartao){
+      faturas[cartao].items.push(l);
+      faturas[cartao].total+=Number(l.valor);
+    }
+  });
+  
+  // Get all time totals per cartao for history
+  const allLancs=await api(`lancamentos?tipo=eq.saida&order=data.desc`).catch(()=>[]);
+  
+  const totalFatura=Object.values(faturas).reduce((s,f)=>s+f.total,0);
+  document.getElementById('cartoes-kpis').innerHTML=`
+    <div class="kpi"><div class="kpi-label">Total faturas mês</div><div class="kpi-val r">${fmt(totalFatura)}</div><div class="kpi-meta">Todos os cartões</div></div>
+    ${CARTOES.map(c=>`<div class="kpi"><div class="kpi-label" style="color:${CARTAO_COLORS[c]}">${c}</div><div class="kpi-val" style="color:${CARTAO_COLORS[c]}">${fmts(faturas[c].total)}</div><div class="kpi-meta">Vence dia ${CARTAO_DIAS[c]}</div></div>`).join('')}`;
+
+  document.getElementById('cartoes-content').innerHTML=CARTOES.map(cartao=>{
+    const f=faturas[cartao];
+    const vd=new Date(y2,m2,CARTAO_DIAS[cartao]);vd.setHours(0,0,0,0);
+    const diff=Math.round((vd-today)/86400000);
+    const vencBadge=diff<0?'<span class="badge r">Vencida</span>':diff<=5?`<span class="badge a">Vence em ${diff}d</span>`:`<span class="badge x">Vence dia ${CARTAO_DIAS[cartao]}</span>`;
+    return `<div class="card" style="margin-bottom:14px">
+      <div class="card-head" style="background:${CARTAO_COLORS[cartao]}10;border-bottom:2px solid ${CARTAO_COLORS[cartao]}30">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:40px;height:26px;background:${CARTAO_COLORS[cartao]};border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff">
+            ${cartao.replace('Cartão ','').substring(0,3).toUpperCase()}
+          </div>
+          <div><div class="card-title" style="color:${CARTAO_COLORS[cartao]}">${cartao}</div><div class="card-sub">Fatura ${MONTHS[m2]} ${y2}</div></div>
+        </div>
+        <div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          <div style="font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${f.total>0?CARTAO_COLORS[cartao]:'var(--hint)'}">${fmt(f.total)}</div>
+          <div style="display:flex;gap:6px;align-items:center">${vencBadge}<button onclick="removeCartao('${cartao}')" style="background:var(--rbg);border:1px solid var(--rbr);color:var(--r);font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit">Remover</button></div>
+        </div>
+      </div>
+      ${f.items.length?`<div>${f.items.map(l=>`
+        <div class="txrow">
+          ${catIco(l.categoria,32)}
+          <div class="txb"><div class="txdesc">${l.descricao.replace(/\s*\[.*?\]/g,'')}</div><div class="txmeta">${l.categoria||'—'} · ${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</div></div>
+          <div class="txr"><div class="txval r">${fmt(l.valor)}</div></div>
+        </div>`).join('')}</div>`:
+        `<div class="empty"><div class="empty-ico">💳</div><div class="empty-txt">Nenhum gasto neste cartão este mês</div></div>`}
+    </div>`;
+  }).join('');
 }
 
 function setRelTab(t,el){relTabV=t;document.querySelectorAll('#page-rel .fchip').forEach(e=>e.classList.remove('active'));el.classList.add('active');renderRel();}
