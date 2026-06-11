@@ -314,11 +314,11 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 .mob-brand em{color:var(--g);font-style:normal}
 .mob-pb{display:none;background:var(--white);border-bottom:1px solid var(--border);padding:0 12px;height:42px;align-items:center;gap:5px;overflow-x:auto;flex-shrink:0}
 .mob-pb::-webkit-scrollbar{height:0}
-.bottomnav{display:none;height:58px;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom)}
+.bottomnav{display:none;height:58px;min-height:58px;background:var(--white);border-top:1px solid var(--border);flex-shrink:0;padding-bottom:env(safe-area-inset-bottom,0px);position:sticky;bottom:0;z-index:100;width:100%}
 .mbtab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;cursor:pointer;color:var(--hint);font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px;transition:color .2s}
 .mbtab svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .mbtab.active{color:var(--g)}
-.fab{position:fixed;bottom:calc(58px + 12px);right:14px;width:48px;height:48px;background:var(--g);border-radius:50%;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(22,163,74,.4);z-index:50;border:none}
+.fab{position:fixed;bottom:calc(58px + 12px + env(safe-area-inset-bottom,0px));right:14px;width:48px;height:48px;background:var(--g);border-radius:50%;display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 20px rgba(22,163,74,.4);z-index:150;border:none}
 .fab svg{width:20px;height:20px;stroke:#fff;fill:none;stroke-width:2.5;stroke-linecap:round}
 
 @media(max-width:900px){.hero-3{grid-template-columns:1fr 1fr}.g3{grid-template-columns:1fr 1fr}.g4{grid-template-columns:1fr 1fr}}
@@ -326,8 +326,10 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
   .sidebar,.topbar,.period-bar{display:none!important}
   .mob-topbar,.mob-pb,.bottomnav{display:flex!important}
   .fab{display:flex!important}
-  .layout{flex-direction:column}.main-area{flex:1;overflow:hidden;display:flex;flex-direction:column}
-  .page-content{padding:12px;padding-bottom:14px}
+  html,body{height:100%;height:100dvh}
+  .layout{flex-direction:column;height:100%;height:100dvh}
+  .main-area{flex:1;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  .page-content{padding:10px;padding-bottom:80px;flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
   .hero-3,.g2,.g3{grid-template-columns:1fr}.g4{grid-template-columns:1fr 1fr}
   .span2{grid-column:span 1}.frow{grid-template-columns:1fr 1fr}
   #cli-grid{grid-template-columns:1fr}.modal{max-width:100%;margin:8px}
@@ -461,6 +463,14 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     <!-- LANÇAMENTOS -->
     <div class="page" id="page-lanc">
       <div class="page-header"><div><h2>Lançamentos</h2><p id="lanc-sub2">—</p></div><button class="add-btn" onclick="openDr('lanc')">+ Novo</button></div>
+      <!-- Search bar -->
+      <div style="position:relative;margin-bottom:12px">
+        <span style="position:absolute;left:12px;top:50%;transform:translateY(-50%);font-size:16px;pointer-events:none">🔍</span>
+        <input class="finput" type="text" id="lanc-search" placeholder="Pesquisar lançamento..." 
+          style="padding-left:38px;background:var(--white)" 
+          oninput="renderLanc()"
+          autocomplete="off">
+      </div>
       <div class="filter-row" id="lanc-chips"></div>
       <div class="card"><div id="lanc-list"></div></div>
     </div>
@@ -1041,7 +1051,7 @@ async function renderDash(){
   const tMes=`${yAtual}-${String(mAtual+1).padStart(2,'0')}-${new Date(yAtual,mAtual+1,0).getDate()}`;
   try{
     [lancs,clientes,contas]=await Promise.all([
-      api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=created_at.desc`),
+      api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=data.desc,created_at.desc`),
       api('clientes?ativo=eq.true&order=nome'),
       api('contas_fixas?order=dia_vencimento')
     ]);
@@ -1347,8 +1357,15 @@ function setFlowType(t,el){flowType=t;['fl-line','fl-bar'].forEach(id=>document.
 async function renderLanc(){
   if(!rFrom||!rTo)return;
   document.getElementById('lanc-list').innerHTML='<div class="spin-wrap"><div class="spin"></div>Carregando...</div>';
-  let lancs=await api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=created_at.desc`).catch(()=>[]);
+  let lancs=await api(`lancamentos?data=gte.${rFrom}&data=lte.${rTo}&order=data.desc,created_at.desc`).catch(()=>[]);
   if(lFilter!=='todos')lancs=lancs.filter(l=>l.tipo===lFilter);
+  // Search filter
+  const searchQ=(document.getElementById('lanc-search')?.value||'').toLowerCase().trim();
+  if(searchQ)lancs=lancs.filter(l=>
+    l.descricao?.toLowerCase().includes(searchQ)||
+    l.categoria?.toLowerCase().includes(searchQ)||
+    l.pagamento?.toLowerCase().includes(searchQ)
+  );
   const ent=lancs.filter(l=>l.tipo==='entrada').reduce((s,l)=>s+Number(l.valor),0);
   const sai=lancs.filter(l=>l.tipo==='saida').reduce((s,l)=>s+Number(l.valor),0);
   document.getElementById('lanc-sub2').textContent=`${lancs.length} registros · ▲ ${fmt(ent)} · ▼ ${fmt(sai)}`;
