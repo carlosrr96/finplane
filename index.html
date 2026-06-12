@@ -1992,10 +1992,12 @@ async function renderCartoes(){
   lista.forEach(ct=>{faturas[ct.nome]={items:[],total:0,pago:false,valorPago:0};});
 
   lancs.forEach(l=>{
+    // Match by: [CartaoName] tag in desc, OR pagamento = cartao name, OR desc = cartao name exactly
     const byPgto=lista.find(ct=>l.pagamento===ct.nome);
     const match=l.descricao.match(/\[(.+?)\]/);
     const byDesc=match?lista.find(ct=>ct.nome===match[1]):null;
-    const cartao=byPgto||byDesc;
+    const byDescExact=lista.find(ct=>l.descricao.trim()===ct.nome||l.descricao.trim()===ct.nome.replace('Cartão ',''));
+    const cartao=byDesc||byPgto||byDescExact;
     if(cartao){
       faturas[cartao.nome].items.push(l);
       faturas[cartao.nome].total+=Number(l.valor);
