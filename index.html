@@ -553,8 +553,19 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
     <div class="mbtab active" onclick="navTo('dash',this)" id="mbi-dash"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>Dashboard</div>
     <div class="mbtab" onclick="navTo('lanc',this)" id="mbi-lanc"><svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>Lançamentos</div>
     <div class="mbtab" onclick="navTo('cli',this)" id="mbi-cli"><svg viewBox="0 0 24 24"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>Clientes</div>
-    <div class="mbtab" onclick="navTo('contas',this)" id="mbi-contas"><svg viewBox="0 0 24 24"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg>Contas</div>
-    <div class="mbtab" onclick="navTo('rel',this)" id="mbi-rel"><svg viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Relatórios</div>
+    <div class="mbtab" onclick="navTo('cartoes',this)" id="mbi-cartoes"><svg viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><line x1="1" y1="10" x2="23" y2="10"/></svg>Cartões</div>
+    <div class="mbtab" onclick="toggleMobMenu(this)" id="mbi-mais"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><circle cx="19" cy="12" r="1.5" fill="currentColor" stroke="none"/></svg>Mais</div>
+  </div>
+  <!-- Mob extra menu -->
+  <div id="mob-menu" style="display:none;position:fixed;bottom:58px;left:0;right:0;background:var(--white);border-top:1px solid var(--border);z-index:200;padding:8px 0;box-shadow:0 -4px 20px rgba(0,0,0,.1)">
+    <div class="lrow" onclick="navTo('contas',document.getElementById('mbi-mais'));closeMobMenu()">
+      <div class="lico x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/></svg></div>
+      <div class="lb"><div class="lb-name">Contas fixas</div></div>
+    </div>
+    <div class="lrow" onclick="navTo('rel',document.getElementById('mbi-mais'));closeMobMenu()">
+      <div class="lico x"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+      <div class="lb"><div class="lb-name">Relatórios</div></div>
+    </div>
   </div>
 </div>
 </div></div>
@@ -986,6 +997,24 @@ function handleSuggestKey(e){
   else if(e.key==='Enter'&&_sugIdx>=0){e.preventDefault();items[_sugIdx].dispatchEvent(new Event('mousedown'));}
   else if(e.key==='Escape'){hideSuggestions();}
 }
+
+function toggleMobMenu(el){
+  const menu=document.getElementById('mob-menu');
+  const isOpen=menu.style.display==='block';
+  menu.style.display=isOpen?'none':'block';
+  el.classList.toggle('active',!isOpen);
+}
+function closeMobMenu(){
+  document.getElementById('mob-menu').style.display='none';
+}
+// Close mob menu when tapping outside
+document.addEventListener('click',e=>{
+  const menu=document.getElementById('mob-menu');
+  const btn=document.getElementById('mbi-mais');
+  if(menu&&menu.style.display==='block'&&!menu.contains(e.target)&&!btn?.contains(e.target)){
+    closeMobMenu();
+  }
+});
 
 function updateClock(){
   const now=new Date();
