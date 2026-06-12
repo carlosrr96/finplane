@@ -1984,43 +1984,41 @@ async function renderCartoes(){
   const CARTAO_COLORS=getCartaoColors();
   const CARTAO_DIAS=getCartaoDias();
 
-  // All saída lancs this month - match by pagamento OR [CartaoName] in descricao
-  const lancs=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}&order=created_at.desc`).catch(()=>[]);
-
+  // Get ALL saída lancs this month
+  const todasSaidas=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}&order=created_at.desc`).catch(()=>[]);
 
   const faturas={};
   lista.forEach(ct=>{faturas[ct.nome]={items:[],total:0,pago:false,valorPago:0};});
 
-  lancs.forEach(l=>{
-    // Match by: [CartaoName] tag in desc, OR pagamento = cartao name, OR desc = cartao name exactly
-    const byPgto=lista.find(ct=>l.pagamento===ct.nome);
-    const match=l.descricao.match(/\[(.+?)\]/);
-    const byDesc=match?lista.find(ct=>ct.nome===match[1]):null;
-    const byDescExact=lista.find(ct=>l.descricao.trim()===ct.nome||l.descricao.trim()===ct.nome.replace('Cartão ',''));
-    const cartao=byDesc||byPgto||byDescExact;
-    if(cartao){
-      faturas[cartao.nome].items.push(l);
-      faturas[cartao.nome].total+=Number(l.valor);
-    }
-  });
+  todasSaidas.forEach(l=>{
+    const desc=l.descricao.toLowerCase().trim();
+    const pgto=(l.pagamento||'').toLowerCase();
+    const cat=(l.categoria||'').toLowerCase();
 
-  // Check if fatura was paid:
-  // 1) Lançamento com descricao "Pagamento fatura X"
-  // 2) Lançamento com pagamento = nomeCartao e descricao contém "pagamento" ou "fatura"
-  // 3) Total de saídas do cartão no mês >= total da fatura (usuário já lançou tudo)
-  const saidasMes=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}`).catch(()=>[]);
-  saidasMes.forEach(l=>{
     lista.forEach(ct=>{
-      const desc=l.descricao.toLowerCase();
       const ctNome=ct.nome.toLowerCase();
-      // Only consider as payment if:
-      // 1. Desc contains "pagamento fatura" + cartao name
-      // 2. Desc contains "pagamento" + cartao name AND no [CartaoName] tag (not a gasto)
-      const hasBracketTag=l.descricao.includes('[');
-      const isPagFatura=!hasBracketTag&&desc.includes('pagamento')&&desc.includes(ctNome);
-      if(isPagFatura){
+      const ctShort=ct.nome.replace('Cartão ','').toLowerCase();
+
+      // PAGAMENTO da fatura: categoria=Contas + descrição contém nome do cartão
+      const isPago=(
+        cat==='contas' && (desc.includes(ctShort)||desc.includes(ctNome))
+      ) || (
+        desc.includes('pagamento') && (desc.includes(ctNome)||desc.includes(ctShort))
+      );
+
+      // GASTO no cartão: pagamento=cartão OU [CartaoName] na descrição
+      const isGasto=(
+        pgto===ctNome || pgto===ctShort ||
+        l.descricao.includes('['+ct.nome+']') ||
+        desc===ctNome || desc===ctShort
+      );
+
+      if(isPago){
         faturas[ct.nome].pago=true;
         faturas[ct.nome].valorPago+=Number(l.valor);
+      } else if(isGasto){
+        faturas[ct.nome].items.push(l);
+        faturas[ct.nome].total+=Number(l.valor);
       }
     });
   });
@@ -2056,7 +2054,7 @@ async function renderCartoes(){
           <div style="font-size:20px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${f.total>0?cor:'var(--hint)'}">${fmt(f.total)}</div>
           <div style="display:flex;gap:5px;align-items:center;flex-wrap:wrap;justify-content:flex-end">
             ${vencBadge}
-            ${!f.pago&&f.total>0?`<button onclick="pagarFatura('${ct.nome}',${f.total},${dia})" style="background:var(--gbg);border:1px solid var(--gbr);color:var(--g);font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600">✓ Pagar</button>`:''}
+            ${!f.pago&&f.total>0?`<button onclick="abrirPagamentoFatura('${ct.nome}',${f.total},${dia})" style="background:var(--gbg);border:1px solid var(--gbr);color:var(--g);font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600">✓ Pagar fatura</button>`:''}
             <button onclick="addGastoCartao('${ct.nome}')" style="background:${cor}15;border:1px solid ${cor}30;color:${cor};font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit;font-weight:600">+ Gasto</button>
             <button onclick="removeCartao('${ct.nome}')" style="background:var(--rbg);border:1px solid var(--rbr);color:var(--r);font-size:11px;padding:2px 8px;border-radius:5px;cursor:pointer;font-family:inherit">Remover</button>
           </div>
@@ -2077,6 +2075,21 @@ async function renderCartoes(){
       :`<div class="empty"><div class="empty-ico">💳</div><div class="empty-txt">Nenhum gasto · <span style="color:var(--g);cursor:pointer" onclick="addGastoCartao('${ct.nome}')">+ Adicionar</span></div></div>`}
     </div>`;
   }).join('');
+}
+
+function abrirPagamentoFatura(nomeCartao, total, dia){
+  // Open lancamento drawer pre-filled as fatura payment
+  setT('saida');
+  document.getElementById('lcat').value='Contas';
+  document.getElementById('lsetor').value='pessoal';
+  document.getElementById('lpgto').value='Pix';
+  document.getElementById('ldesc').value=nomeCartao;
+  document.getElementById('lv').value=String(total.toFixed(2)).replace('.',',');
+  document.getElementById('lanc-edit-id').value='';
+  document.getElementById('cartao-wrap').style.display='none';
+  document.getElementById('cartao-parcela-wrap').style.display='none';
+  onCatChange();
+  openDr('lanc');
 }
 
 async function pagarFatura(nomeCartao, total, dia){
