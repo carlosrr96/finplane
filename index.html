@@ -1465,7 +1465,9 @@ async function saveLanc(){
   const isCartaoParcelado=document.getElementById('cartao-parcelado')?.checked&&cat==='Cartões';
   const nParc=isCartaoParcelado?parseInt(document.getElementById('cartao-nparcelas').value)||0:0;
   const descParc=isCartaoParcelado&&nParc>1?` (${nParc}x)`:'';
-  const descFinal=cat==='Cartões'&&cartao?`${desc}${descParc} [${cartao}]`:desc;
+  // Don't duplicate cartao name in description
+  const descSemTag=desc.replace(/\s*\[.*?\]/g,'').trim();
+  const descFinal=cat==='Cartões'&&cartao?`${descSemTag}${descParc} [${cartao}]`:desc;
   const pgto=cat==='Cartões'&&cartao?cartao:document.getElementById('lpgto').value;
   const payload={data,descricao:descFinal,categoria:cat,pagamento:pgto,tipo:lTipo,valor:val,setor:document.getElementById('lsetor').value};
   try{
@@ -1984,8 +1986,7 @@ async function renderCartoes(){
 
   // All saída lancs this month - match by pagamento OR [CartaoName] in descricao
   const lancs=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}&order=created_at.desc`).catch(()=>[]);
-  // Also get pago (entrada) for each cartao - check if fatura was paid
-  const entradas=await api(`lancamentos?tipo=eq.entrada&data=gte.${fMesC}&data=lte.${tMesC}`).catch(()=>[]);
+
 
   const faturas={};
   lista.forEach(ct=>{faturas[ct.nome]={items:[],total:0,pago:false,valorPago:0};});
@@ -2001,10 +2002,21 @@ async function renderCartoes(){
     }
   });
 
-  // Check if fatura was paid this month (entrada com nome do cartao)
-  entradas.forEach(l=>{
+  // Check if fatura was paid:
+  // 1) Lançamento com descricao "Pagamento fatura X"
+  // 2) Lançamento com pagamento = nomeCartao e descricao contém "pagamento" ou "fatura"
+  // 3) Total de saídas do cartão no mês >= total da fatura (usuário já lançou tudo)
+  const saidasMes=await api(`lancamentos?tipo=eq.saida&data=gte.${fMesC}&data=lte.${tMesC}`).catch(()=>[]);
+  saidasMes.forEach(l=>{
     lista.forEach(ct=>{
-      if(l.descricao.toLowerCase().includes(ct.nome.toLowerCase())||l.descricao.toLowerCase().includes('fatura')){
+      const desc=l.descricao.toLowerCase();
+      const ctNome=ct.nome.toLowerCase();
+      // Only consider as payment if:
+      // 1. Desc contains "pagamento fatura" + cartao name
+      // 2. Desc contains "pagamento" + cartao name AND no [CartaoName] tag (not a gasto)
+      const hasBracketTag=l.descricao.includes('[');
+      const isPagFatura=!hasBracketTag&&desc.includes('pagamento')&&desc.includes(ctNome);
+      if(isPagFatura){
         faturas[ct.nome].pago=true;
         faturas[ct.nome].valorPago+=Number(l.valor);
       }
@@ -2071,9 +2083,9 @@ async function pagarFatura(nomeCartao, total, dia){
   try{
     await api('lancamentos',{method:'POST',body:JSON.stringify({
       data,descricao:`Pagamento fatura ${nomeCartao}`,
-      categoria:'Cartões',pagamento:'Pix',tipo:'entrada',valor:total,setor:'pessoal'
+      categoria:'Cartões',pagamento:'Pix',tipo:'saida',valor:total,setor:'pessoal'
     })});
-    toast(`✓ Fatura ${nomeCartao} paga!`);
+    toast(`✓ Fatura ${nomeCartao} marcada como paga!`);
     allLancs=null;
     renderCartoes();
     if(document.getElementById('page-dash').classList.contains('active'))renderDash();
