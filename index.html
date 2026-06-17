@@ -1158,26 +1158,42 @@ function startVoice(){
   trans.style.display='block';
   trans.textContent='...';
 
+  let finalTranscript='';
+  let processingStarted=false;
+
   recognition.onresult=(e)=>{
-    const transcript=Array.from(e.results).map(r=>r[0].transcript).join('');
-    trans.textContent='"'+transcript+'"';
-    if(e.results[0].isFinal){
-      stopRecognition();
-      processVoiceWithAI(transcript);
+    let interim='';
+    finalTranscript='';
+    for(let i=0;i<e.results.length;i++){
+      if(e.results[i].isFinal)finalTranscript+=e.results[i][0].transcript;
+      else interim+=e.results[i][0].transcript;
     }
+    trans.textContent='"'+(finalTranscript||interim)+'"';
   };
 
   recognition.onerror=(e)=>{
+    if(e.error==='no-speech'){
+      // Just stopped, don't reset if we have text
+      return;
+    }
     stopRecognition();
     resetVoiceUI();
     toast('Erro no microfone: '+e.error,'err');
   };
 
   recognition.onend=()=>{
-    if(isRecording){stopRecognition();}
+    isRecording=false;
     orb.style.transform='scale(1)';
     orb.style.background='linear-gradient(135deg,#6366F1,#8B5CF6)';
     status.style.color='var(--sub)';
+    // Process whatever was captured
+    if(!processingStarted&&finalTranscript.trim()){
+      processingStarted=true;
+      processVoiceWithAI(finalTranscript.trim());
+    } else if(!processingStarted&&!finalTranscript.trim()){
+      status.textContent='Não ouvi nada. Tente novamente.';
+      trans.style.display='none';
+    }
   };
 
   recognition.start();
