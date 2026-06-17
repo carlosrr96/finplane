@@ -254,6 +254,7 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 .spin-wrap{display:flex;align-items:center;justify-content:center;padding:40px;gap:10px;color:var(--sub);font-size:13px}
 .spin{width:16px;height:16px;border:2px solid var(--border2);border-top-color:var(--g);border-radius:50%;animation:sp .7s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-6px)}}
 .empty{padding:36px 16px;text-align:center}
 .empty-ico{font-size:30px;margin-bottom:8px;opacity:.7}
 .empty-txt{color:var(--sub);font-size:13px}
@@ -1202,10 +1203,103 @@ function startVoiceRecord(){
 }
 
 function processUserSpeech(txt){
-  // If waiting for a specific answer
   if(currentQuestion){processAnswer(txt);return;}
-  // Otherwise parse the whole utterance
-  parseInitialSpeech(txt);
+  parseWithClaude(txt);
+}
+
+async function parseWithClaude(txt){
+  // Show typing indicator
+  const chat=document.getElementById('voice-chat');
+  const typing=document.createElement('div');
+  typing.id='voice-typing';
+  typing.style.cssText='display:flex;gap:8px;align-items:center';
+  typing.innerHTML=`<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">✨</div>
+    <div style="padding:10px 14px;background:var(--s1);border-radius:4px 14px 14px 14px;border:1px solid var(--border);display:flex;gap:4px;align-items:center">
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--hint);animation:bounce 1s infinite 0s"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--hint);animation:bounce 1s infinite .2s"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--hint);animation:bounce 1s infinite .4s"></div>
+    </div>`;
+  chat.appendChild(typing);
+  chat.scrollTop=chat.scrollHeight;
+
+  const cartoes=getCartoesList().map(c=>c.nome).join(', ');
+  const hoje=new Date().toISOString().split('T')[0];
+  const categorias=CATS.join(', ');
+
+  const prompt=`Você é um assistente financeiro brasileiro ultra-inteligente. 
+O usuário disse: "${txt}"
+
+Analise e extraia as informações. Responda SOMENTE com JSON válido:
+{
+  "descricao": "nome específico do estabelecimento/item (ex: Supermercado Gricki, Pizza Big Boca, Farmácia Panvel) - NUNCA use 'no supermercado', 'na farmácia' etc, sempre o nome específico se tiver, se não souber deixe vazio",
+  "valor": 0.00,
+  "tipo": "saida ou entrada",  
+  "categoria": "uma de: ${categorias}",
+  "pagamento": "Pix, Débito Sicredi, Dinheiro, Caju, ou um de: ${cartoes}",
+  "setor": "pessoal ou agencia",
+  "data": "${hoje}",
+  "faltando": ["lista de campos que precisam ser perguntados: descricao, pagamento, etc"],
+  "pergunta": "se 'faltando' não estiver vazio, qual pergunta fazer agora (apenas UMA)"
+}
+
+Regras importantes:
+- Se o usuário disse "no supermercado" mas não disse o nome, descricao deve ser vazio e faltando deve ter "descricao"
+- Se não falou como pagou, faltando deve ter "pagamento"  
+- setor: Agência Plane = agencia, todo o resto = pessoal
+- Se for entrada (recebi, entrou), tipo = entrada e categoria = Agência Plane
+- Valor deve ser número (ex: 50.00)`;
+
+  try{
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-6',
+        max_tokens:400,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await resp.json();
+    // Remove typing indicator
+    document.getElementById('voice-typing')?.remove();
+
+    if(data.error){throw new Error(data.error.message);}
+
+    const raw=data.content?.[0]?.text||'{}';
+    const clean=raw.replace(/```json|```/g,'').trim();
+    const parsed=JSON.parse(clean);
+
+    // Merge into voiceState
+    if(parsed.valor>0)voiceState.valor=parsed.valor;
+    if(parsed.tipo)voiceState.tipo=parsed.tipo;
+    if(parsed.categoria)voiceState.categoria=parsed.categoria;
+    if(parsed.descricao&&parsed.descricao.trim().length>1)voiceState.descricao=parsed.descricao;
+    if(parsed.pagamento&&parsed.pagamento!=='null')voiceState.pagamento=parsed.pagamento;
+    if(parsed.setor)voiceState.setor=parsed.setor;
+    if(parsed.data)voiceState.data=parsed.data;
+
+    // If Claude identified missing fields and has a question
+    if(parsed.faltando&&parsed.faltando.length>0&&parsed.pergunta){
+      currentQuestion=parsed.faltando[0];
+      addAIMessage(parsed.pergunta);
+      // Show quick buttons based on what's missing
+      if(currentQuestion==='pagamento'){
+        const opts=['Pix','Débito Sicredi',...getCartoesList().map(ct=>ct.nome),'Dinheiro'];
+        showQuickBtns(opts.slice(0,6));
+      } else if(currentQuestion==='categoria'){
+        showQuickBtns(['Supermercado','Comer fora','Combustível','Farmácia','Carro','Gastos Pessoais']);
+      } else {
+        showQuickBtns([]);
+      }
+      return;
+    }
+
+    runDialogue();
+  }catch(e){
+    document.getElementById('voice-typing')?.remove();
+    // Fallback to local parsing
+    parseInitialSpeech(txt);
+  }
 }
 
 function parseInitialSpeech(txt){
@@ -1242,11 +1336,17 @@ function parseInitialSpeech(txt){
 
   // DESCRIÇÃO — extract the "what" from speech
   let desc=txt.trim();
-  desc=desc.replace(/gastei|comprei|paguei|fiz|realizei|acabei de|eu\s/gi,'');
-  desc=desc.replace(/\d+(?:[.,]\d+)?\s*(?:reais?|real)/gi,'');
-  desc=desc.replace(/r\$\s*\d+(?:[.,]\d+)?/gi,'');
-  desc=desc.replace(/no pix|pelo pix|por pix|no débito|pelo débito|com débito|no cartão|em dinheiro|à vista/gi,'');
-  desc=desc.replace(/cartão\s+(itaú|sicredi|c6|mercadopago)/gi,'');
+  // Remove action words at start
+  desc=desc.replace(/^(gastei|comprei|paguei|fiz|realizei|acabei de gastar|acabei de comprar|acabei de pagar|eu gastei|eu comprei|eu paguei)\s+/gi,'');
+  // Remove value
+  desc=desc.replace(/\d+(?:[.,]\d+)?\s*(?:reais?|real)/gi,'');
+  desc=desc.replace(/r\$\s*\d+(?:[.,]\d+)?/gi,'');
+  // Remove payment words
+  desc=desc.replace(/(no pix|pelo pix|por pix|no débito|pelo débito|com débito|no cartão|em dinheiro|à vista|via pix|via débito)/gi,'');
+  // Remove cartao names
+  const cartaoNames=getCartoesList().map(ct=>ct.nome.toLowerCase());
+  cartaoNames.forEach(n=>{desc=desc.replace(new RegExp('\\b'+n.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','gi'),'');});
+  desc=desc.replace(/\s*(no|na|no|do|da|em)\s*$/gi,'');
   desc=desc.replace(/\s+/g,' ').trim();
   desc=desc.charAt(0).toUpperCase()+desc.slice(1);
   if(desc.length>2)state.descricao=desc;
@@ -1287,10 +1387,23 @@ function runDialogue(){
     showQuickBtns(['Supermercado','Comer fora','Combustível','Farmácia','Carro','Gastos Pessoais','Contas','Outros']);
     return;
   }
-  if(!voiceState.descricao||voiceState.descricao.length<3){
+  // Check if description is too generic (just the category name or very short)
+  const genericDescs=['supermercado','mercado','farmácia','comer fora','combustível','gasolina','carro','contas','outros'];
+  const descLower=(voiceState.descricao||'').toLowerCase().trim();
+  const isGeneric=!voiceState.descricao||voiceState.descricao.length<3||genericDescs.some(g=>descLower===g||descLower==='no '+g||descLower==='na '+g||descLower==='num '+g);
+  if(isGeneric){
     currentQuestion='descricao';
-    const hint=voiceState.categoria==='Supermercado'?'Qual supermercado?':voiceState.categoria==='Comer fora'?'Onde foi?':'Descreva melhor o gasto.';
-    addAIMessage(hint+' 📝');
+    const hints={
+      'Supermercado':'Qual supermercado? 🛒 (ex: Gricki, Spani, Estrela)',
+      'Comer fora':'Onde foi? 🍽️ (ex: Subway, Restaurante Varola)',
+      'Combustível':'Qual posto? ⛽ (ou só confirme "Gasolina")',
+      'Farmácia':'Qual farmácia? 💊 (ou o remédio comprado)',
+      'Carro':'O que foi feito no carro? 🚗',
+      'Gastos Pessoais':'O que foi? 🛍️',
+      'Contas':'Qual conta? 📋 (ex: Conta de luz, Cartão Itaú)',
+    };
+    const hint=hints[voiceState.categoria]||'Pode detalhar melhor? 📝';
+    addAIMessage(hint);
     showQuickBtns([]);
     return;
   }
