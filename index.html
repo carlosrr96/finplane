@@ -768,47 +768,36 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
 
 <!-- VOICE AI MODAL -->
 <div id="voice-modal" style="display:none;position:fixed;inset:0;z-index:600;background:rgba(15,23,42,.6);backdrop-filter:blur(8px);align-items:flex-end;justify-content:center">
-  <div style="background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:520px;padding:28px 24px 44px;box-shadow:0 -10px 40px rgba(0,0,0,.2)">
-    <!-- Handle -->
-    <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 20px"></div>
-    
-    <!-- Header -->
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
-      <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center">
+  <div style="background:var(--white);border-radius:24px 24px 0 0;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;padding:24px 22px 44px;box-shadow:0 -10px 40px rgba(0,0,0,.2)">
+    <div style="width:36px;height:4px;background:var(--border2);border-radius:2px;margin:0 auto 18px"></div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:18px">
+      <div style="width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;flex-shrink:0">
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/></svg>
       </div>
-      <div>
-        <div style="font-size:16px;font-weight:800;color:var(--text)">FinPlane IA</div>
-        <div style="font-size:12px;color:var(--sub)">Lançamento por voz</div>
-      </div>
-      <button onclick="closeVoice()" style="margin-left:auto;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--sub);font-family:inherit">✕ Fechar</button>
+      <div><div style="font-size:16px;font-weight:800">FinPlane IA</div><div style="font-size:12px;color:var(--sub)" id="voice-ai-sub">Assistente de voz</div></div>
+      <button onclick="closeVoice()" style="margin-left:auto;background:var(--s1);border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;font-size:13px;color:var(--sub);font-family:inherit">✕</button>
     </div>
 
-    <!-- Recording area -->
-    <div id="voice-recording-area" style="text-align:center;padding:20px 0">
-      <div id="voice-orb" style="width:80px;height:80px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);margin:0 auto 16px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 8px 32px rgba(99,102,241,.4);transition:transform .2s" onclick="startVoice()">
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+    <!-- Chat messages -->
+    <div id="voice-chat" style="min-height:80px;margin-bottom:16px;display:flex;flex-direction:column;gap:10px"></div>
+
+    <!-- Mic button area -->
+    <div id="voice-mic-area" style="text-align:center;padding:10px 0 6px">
+      <div id="voice-orb" onclick="toggleVoiceRecord()" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);margin:0 auto 12px;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 6px 24px rgba(99,102,241,.4);transition:all .3s">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
       </div>
-      <div id="voice-status" style="font-size:14px;color:var(--sub);margin-bottom:8px">Toque no microfone e fale</div>
-      <div id="voice-hint" style="font-size:12px;color:var(--hint);line-height:1.5">Ex: "Gastei 106 reais no supermercado Gricki"<br>ou "Almocei fora por 45 reais no débito"</div>
-      <div id="voice-transcript" style="margin-top:14px;padding:12px 16px;background:var(--s1);border-radius:10px;font-size:14px;color:var(--text);min-height:44px;display:none;text-align:left;border:1px solid var(--border);font-style:italic"></div>
+      <div id="voice-orb-label" style="font-size:12px;color:var(--sub)">Toque para falar</div>
     </div>
 
-    <!-- AI Processing -->
-    <div id="voice-processing" style="display:none;text-align:center;padding:16px 0">
-      <div style="display:flex;align-items:center;justify-content:center;gap:10px;color:var(--sub);font-size:13px">
-        <div class="spin" style="border-top-color:#6366F1"></div>
-        Interpretando com IA...
-      </div>
-    </div>
+    <!-- Quick answer buttons -->
+    <div id="voice-quick-btns" style="display:none;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:12px"></div>
 
-    <!-- Preview / Confirm -->
-    <div id="voice-preview" style="display:none">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--sub);margin-bottom:10px">✨ IA identificou:</div>
-      <div id="voice-preview-card" style="background:var(--s1);border:1.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:14px"></div>
+    <!-- Confirm area -->
+    <div id="voice-confirm-area" style="display:none">
+      <div id="voice-confirm-card" style="background:var(--s1);border:1.5px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        <button onclick="confirmVoiceLanc()" style="background:var(--g);color:#fff;font-family:inherit;font-weight:700;font-size:14px;padding:13px;border:none;border-radius:10px;cursor:pointer">✓ Confirmar e lançar</button>
-        <button onclick="retryVoice()" style="background:var(--s1);color:var(--sub);font-family:inherit;font-size:14px;padding:13px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer">🎤 Tentar de novo</button>
+        <button onclick="confirmVoiceLanc()" style="background:var(--g);color:#fff;font-family:inherit;font-weight:700;font-size:14px;padding:13px;border:none;border-radius:10px;cursor:pointer">✓ Confirmar</button>
+        <button onclick="resetVoiceUI()" style="background:var(--s1);color:var(--sub);font-family:inherit;font-size:14px;padding:13px;border:1.5px solid var(--border);border-radius:10px;cursor:pointer">↺ Recomeçar</button>
       </div>
     </div>
   </div>
@@ -1089,12 +1078,24 @@ document.addEventListener('click',e=>{
 
 // ===== VOICE AI =====
 let recognition=null;
-let voicePendingLanc=null;
 let isRecording=false;
+let voiceState={};  // current lanc being built
+let voicePendingLanc=null;
+let currentQuestion=null;
+
+const SETOR_MAP={
+  'Agência Plane':'agencia','Carro':'pessoal','Supermercado':'pessoal',
+  'Comer fora':'pessoal','Combustível':'pessoal','Cartões':'pessoal',
+  'Contas':'pessoal','Dízimo':'pessoal','Emanuele':'pessoal',
+  'Farmácia':'pessoal','Viagem':'pessoal','Gastos Pessoais':'pessoal',
+  'Itens Casa':'pessoal','Oferta':'pessoal','Investimento':'pessoal',
+  'Salão':'pessoal','Educação':'pessoal','Outros':'pessoal'
+};
 
 function openVoiceModal(){
   document.getElementById('voice-modal').style.display='flex';
   resetVoiceUI();
+  addAIMessage('Olá! Pode falar o que gastou. Ex: "Gastei 106 reais no supermercado Gricki no débito"');
 }
 function closeVoice(){
   document.getElementById('voice-modal').style.display='none';
@@ -1102,178 +1103,269 @@ function closeVoice(){
 }
 
 function resetVoiceUI(){
-  document.getElementById('voice-recording-area').style.display='block';
-  document.getElementById('voice-processing').style.display='none';
-  document.getElementById('voice-preview').style.display='none';
-  document.getElementById('voice-transcript').style.display='none';
-  document.getElementById('voice-status').textContent='Toque no microfone e fale';
-  document.getElementById('voice-orb').style.transform='scale(1)';
-  document.getElementById('voice-orb').style.boxShadow='0 8px 32px rgba(99,102,241,.4)';
-  voicePendingLanc=null;
-  isRecording=false;
+  voiceState={};voicePendingLanc=null;currentQuestion=null;
+  document.getElementById('voice-chat').innerHTML='';
+  document.getElementById('voice-quick-btns').style.display='none';
+  document.getElementById('voice-quick-btns').innerHTML='';
+  document.getElementById('voice-confirm-area').style.display='none';
+  document.getElementById('voice-mic-area').style.display='block';
+  setOrbIdle();
 }
 
-function retryVoice(){
-  resetVoiceUI();
-  setTimeout(()=>startVoice(),300);
+function setOrbIdle(){
+  const orb=document.getElementById('voice-orb');
+  const lbl=document.getElementById('voice-orb-label');
+  orb.style.background='linear-gradient(135deg,#6366F1,#8B5CF6)';
+  orb.style.transform='scale(1)';
+  orb.style.boxShadow='0 6px 24px rgba(99,102,241,.4)';
+  if(lbl)lbl.textContent='Toque para falar';
+}
+function setOrbRecording(){
+  const orb=document.getElementById('voice-orb');
+  const lbl=document.getElementById('voice-orb-label');
+  orb.style.background='linear-gradient(135deg,#EF4444,#DC2626)';
+  orb.style.transform='scale(1.12)';
+  orb.style.boxShadow='0 6px 32px rgba(239,68,68,.6)';
+  if(lbl)lbl.textContent='🔴 Ouvindo... toque para parar';
+}
+
+function addAIMessage(text, isUser=false){
+  const chat=document.getElementById('voice-chat');
+  const div=document.createElement('div');
+  div.style.cssText=`display:flex;gap:8px;align-items:flex-start;${isUser?'flex-direction:row-reverse':''}`;
+  const avatar=isUser
+    ?`<div style="width:28px;height:28px;border-radius:50%;background:var(--gbg);border:1px solid var(--gbr);display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">👤</div>`
+    :`<div style="width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,#6366F1,#8B5CF6);display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">✨</div>`;
+  const bubble=`<div style="max-width:85%;padding:10px 13px;border-radius:${isUser?'14px 4px 14px 14px':'4px 14px 14px 14px'};background:${isUser?'var(--gbg)':'var(--s1)'};border:1px solid ${isUser?'var(--gbr)':'var(--border)'};font-size:13px;color:var(--text);line-height:1.5">${text}</div>`;
+  div.innerHTML=avatar+bubble;
+  chat.appendChild(div);
+  chat.scrollTop=chat.scrollHeight;
+}
+
+function showQuickBtns(options){
+  const wrap=document.getElementById('voice-quick-btns');
+  wrap.style.display='flex';
+  wrap.innerHTML=options.map(opt=>
+    `<button onclick="quickAnswer('${opt.replace(/'/g,"\'")}',this)" style="background:var(--white);border:1.5px solid var(--border);border-radius:20px;padding:7px 14px;font-size:12px;font-weight:600;color:var(--text);cursor:pointer;font-family:inherit;transition:all .15s">${opt}</button>`
+  ).join('');
+}
+
+function quickAnswer(answer){
+  document.getElementById('voice-quick-btns').style.display='none';
+  addAIMessage(answer, true);
+  processAnswer(answer);
 }
 
 function stopRecognition(){
-  if(recognition){try{recognition.stop();}catch(e){}recognition=null;}
+  if(recognition){try{recognition.abort();}catch(e){}recognition=null;}
   isRecording=false;
+  setOrbIdle();
 }
 
-function startVoice(){
-  // Open modal if not open
-  if(document.getElementById('voice-modal').style.display!=='flex'){
-    openVoiceModal();
-    setTimeout(startVoice,300);
+function toggleVoiceRecord(){
+  if(isRecording){stopRecognition();return;}
+  startVoiceRecord();
+}
+
+function startVoiceRecord(){
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){
+    // Fallback: show text input
+    const txt=prompt('Digite o que deseja lançar:');
+    if(txt){addAIMessage(txt,true);processUserSpeech(txt);}
     return;
   }
-  if(isRecording){stopRecognition();resetVoiceUI();return;}
-
-  const SpeechRecognition=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SpeechRecognition){
-    toast('Reconhecimento de voz não suportado neste navegador','err');
-    return;
-  }
-
-  recognition=new SpeechRecognition();
+  recognition=new SR();
   recognition.lang='pt-BR';
   recognition.continuous=false;
-  recognition.interimResults=true;
+  recognition.interimResults=false;
   recognition.maxAlternatives=1;
-
   isRecording=true;
-  const orb=document.getElementById('voice-orb');
-  const status=document.getElementById('voice-status');
-  const trans=document.getElementById('voice-transcript');
-  
-  // Pulse animation
-  orb.style.transform='scale(1.15)';
-  orb.style.boxShadow='0 8px 40px rgba(99,102,241,.7)';
-  orb.style.background='linear-gradient(135deg,#EF4444,#DC2626)';
-  status.textContent='🔴 Ouvindo... fale agora!';
-  status.style.color='var(--r)';
-  trans.style.display='block';
-  trans.textContent='...';
+  setOrbRecording();
 
-  let finalTranscript='';
-  let processingStarted=false;
-
+  let gotResult=false;
   recognition.onresult=(e)=>{
-    let interim='';
-    finalTranscript='';
-    for(let i=0;i<e.results.length;i++){
-      if(e.results[i].isFinal)finalTranscript+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
-    }
-    trans.textContent='"'+(finalTranscript||interim)+'"';
-  };
-
-  recognition.onerror=(e)=>{
-    if(e.error==='no-speech'){
-      // Just stopped, don't reset if we have text
-      return;
-    }
+    gotResult=true;
+    const txt=e.results[0][0].transcript.trim();
     stopRecognition();
-    resetVoiceUI();
-    toast('Erro no microfone: '+e.error,'err');
+    addAIMessage(txt,true);
+    processUserSpeech(txt);
   };
-
+  recognition.onerror=(e)=>{
+    stopRecognition();
+    if(e.error!=='no-speech')addAIMessage('Não consegui ouvir. Tente novamente.','ai');
+  };
   recognition.onend=()=>{
-    isRecording=false;
-    orb.style.transform='scale(1)';
-    orb.style.background='linear-gradient(135deg,#6366F1,#8B5CF6)';
-    status.style.color='var(--sub)';
-    // Process whatever was captured
-    if(!processingStarted&&finalTranscript.trim()){
-      processingStarted=true;
-      processVoiceWithAI(finalTranscript.trim());
-    } else if(!processingStarted&&!finalTranscript.trim()){
-      status.textContent='Não ouvi nada. Tente novamente.';
-      trans.style.display='none';
-    }
+    if(!gotResult)stopRecognition();
   };
-
   recognition.start();
 }
 
-async function processVoiceWithAI(transcript){
-  document.getElementById('voice-recording-area').style.display='none';
-  document.getElementById('voice-processing').style.display='block';
-
-  const today_str=new Date().toISOString().split('T')[0];
-  const cats=CATS.join(', ');
-  const cartoes=getCartoesList().map(c=>c.nome).join(', ');
-
-  const prompt=`Você é um assistente de controle financeiro brasileiro. 
-O usuário disse: "${transcript}"
-
-Extraia as informações financeiras e responda APENAS com JSON válido, sem texto extra:
-{
-  "descricao": "descrição curta do gasto",
-  "valor": 0.00,
-  "tipo": "saida ou entrada",
-  "categoria": "uma das categorias: ${cats}",
-  "pagamento": "forma de pagamento (Pix, Débito Sicredi, ${cartoes}, Dinheiro, etc)",
-  "setor": "pessoal ou agencia",
-  "data": "${today_str}",
-  "confianca": "alta, media ou baixa",
-  "resumo": "frase curta confirmando o que entendeu"
+function processUserSpeech(txt){
+  // If waiting for a specific answer
+  if(currentQuestion){processAnswer(txt);return;}
+  // Otherwise parse the whole utterance
+  parseInitialSpeech(txt);
 }
 
-Regras:
-- Se mencionar supermercado/mercado = categoria Supermercado
-- Se mencionar restaurante/lanche/almoço/jantar/café = Comer fora  
-- Se mencionar gasolina/combustível = Combustível
-- Se mencionar cartão = pagamento = nome do cartão
-- Se mencionar Pix/débito = pagamento correspondente
-- valor deve ser número decimal (ex: 20.50)
-- setor padrão = pessoal`;
+function parseInitialSpeech(txt){
+  const t=txt.toLowerCase();
+  const state={};
 
-  try{
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:500,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data=await resp.json();
-    const text=data.content?.[0]?.text||'{}';
-    const clean=text.replace(/```json|```/g,'').trim();
-    const lanc=JSON.parse(clean);
-    
-    document.getElementById('voice-processing').style.display='none';
-    showVoicePreview(lanc, transcript);
-  }catch(e){
-    document.getElementById('voice-processing').style.display='none';
-    resetVoiceUI();
-    toast('Erro ao processar com IA','err');
+  // TIPO
+  const entradaWords=['recebi','entrou','ganhou','entrada','recebimento','pagamento recebido'];
+  state.tipo=entradaWords.some(w=>t.includes(w))?'entrada':'saida';
+
+  // VALOR
+  const numMatch=t.match(/(?:r\$\s*)?(\d+(?:[.,]\d{1,2})?)\s*(?:reais?|real)?/);
+  if(numMatch)state.valor=parseFloat(numMatch[1].replace(',','.'));
+
+  // CATEGORIA
+  const catRules=[
+    {cat:'Supermercado',words:['supermercado','mercado','gricki','spani','estrela','mineirão','alvorada','nicolau','feira','hortifruti','açougue']},
+    {cat:'Comer fora',words:['restaurante','lanche','almoço','almocei','jantei','jantar','café','pizza','hamburguer','delivery','subway','sushi','lanchonete','snack','petisco','churros','pastel','espetinho']},
+    {cat:'Combustível',words:['gasolina','combustível','etanol','diesel','posto','abasteci']},
+    {cat:'Farmácia',words:['farmácia','remédio','medicamento','drogaria','colírio']},
+    {cat:'Carro',words:['mecânico','pneu','revisão','troca de óleo','ipva','seguro carro','lavar carro','borracheiro']},
+    {cat:'Emanuele',words:['emanuele','manu','fraldas','leite nestogeno','leite pregomin','pediatra','brinquedo']},
+    {cat:'Itens Casa',words:['faxineira','limpeza','material construção','tijolo','cimento','tinta','conserto','encanador']},
+    {cat:'Gastos Pessoais',words:['cabelo','salão','roupa','sapato','presente','academia','netflix','spotify','plano tim','plano claro','celular']},
+    {cat:'Contas',words:['conta de luz','conta água','internet','aluguel','iptu','condomínio','energia elétrica']},
+    {cat:'Dízimo',words:['dízimo','oferta','igreja','dizimo']},
+    {cat:'Viagem',words:['viagem','hotel','passagem','airbnb','hospedagem']},
+    {cat:'Investimento',words:['investimento','poupança','consórcio','tesouro']},
+    {cat:'Agência Plane',words:['agência','cliente','design','marketing','anuncio','ferramenta','claude','plataforma']},
+  ];
+  for(const rule of catRules){
+    if(rule.words.some(w=>t.includes(w))){state.categoria=rule.cat;break;}
   }
+
+  // DESCRIÇÃO — extract the "what" from speech
+  let desc=txt.trim();
+  desc=desc.replace(/gastei|comprei|paguei|fiz|realizei|acabei de|eu\s/gi,'');
+  desc=desc.replace(/\d+(?:[.,]\d+)?\s*(?:reais?|real)/gi,'');
+  desc=desc.replace(/r\$\s*\d+(?:[.,]\d+)?/gi,'');
+  desc=desc.replace(/no pix|pelo pix|por pix|no débito|pelo débito|com débito|no cartão|em dinheiro|à vista/gi,'');
+  desc=desc.replace(/cartão\s+(itaú|sicredi|c6|mercadopago)/gi,'');
+  desc=desc.replace(/\s+/g,' ').trim();
+  desc=desc.charAt(0).toUpperCase()+desc.slice(1);
+  if(desc.length>2)state.descricao=desc;
+
+  // PAGAMENTO
+  const cartoes=getCartoesList();
+  for(const ct of cartoes){
+    const n=ct.nome.toLowerCase();
+    const s=ct.nome.replace('Cartão ','').toLowerCase();
+    if(t.includes(n)||t.includes(s)){state.pagamento=ct.nome;break;}
+  }
+  if(!state.pagamento){
+    if(t.includes('débito')||t.includes('debito'))state.pagamento='Débito Sicredi';
+    else if(t.includes('dinheiro')||t.includes('espécie'))state.pagamento='Dinheiro';
+    else if(t.includes('caju'))state.pagamento='Caju';
+    else if(t.includes('pix'))state.pagamento='Pix';
+  }
+
+  // SETOR automático por categoria
+  state.setor=SETOR_MAP[state.categoria]||'pessoal';
+  state.data=new Date().toISOString().split('T')[0];
+
+  voiceState=state;
+  runDialogue();
 }
 
-function showVoicePreview(lanc, transcript){
-  voicePendingLanc=lanc;
-  const color=lanc.tipo==='entrada'?'var(--g)':'var(--r)';
-  const sinal=lanc.tipo==='entrada'?'+':'-';
-  document.getElementById('voice-preview-card').innerHTML=`
+function runDialogue(){
+  // Check what's missing and ask
+  if(!voiceState.valor){
+    currentQuestion='valor';
+    addAIMessage('Qual foi o valor? 💰');
+    showQuickBtns([]);
+    return;
+  }
+  if(!voiceState.categoria){
+    currentQuestion='categoria';
+    addAIMessage('Qual categoria? 📂');
+    showQuickBtns(['Supermercado','Comer fora','Combustível','Farmácia','Carro','Gastos Pessoais','Contas','Outros']);
+    return;
+  }
+  if(!voiceState.descricao||voiceState.descricao.length<3){
+    currentQuestion='descricao';
+    const hint=voiceState.categoria==='Supermercado'?'Qual supermercado?':voiceState.categoria==='Comer fora'?'Onde foi?':'Descreva melhor o gasto.';
+    addAIMessage(hint+' 📝');
+    showQuickBtns([]);
+    return;
+  }
+  if(!voiceState.pagamento){
+    currentQuestion='pagamento';
+    addAIMessage('Como foi pago? 💳');
+    const opts=['Pix','Débito Sicredi',...getCartoesList().map(c=>c.nome),'Dinheiro'];
+    showQuickBtns(opts.slice(0,6));
+    return;
+  }
+  // All good - show confirmation
+  currentQuestion=null;
+  showVoiceConfirm();
+}
+
+function processAnswer(answer){
+  const t=answer.toLowerCase().trim();
+  if(currentQuestion==='valor'){
+    const m=t.match(/(\d+(?:[.,]\d{1,2})?)/);
+    if(m)voiceState.valor=parseFloat(m[1].replace(',','.'));
+    else{addAIMessage('Não entendi o valor. Digite um número como "50" ou "106,50".');return;}
+  }
+  else if(currentQuestion==='categoria'){
+    // Match to a category
+    const found=CATS.find(cat=>cat.toLowerCase().includes(t)||t.includes(cat.toLowerCase()));
+    if(found)voiceState.categoria=found;
+    else voiceState.categoria=answer;
+    voiceState.setor=SETOR_MAP[voiceState.categoria]||'pessoal';
+  }
+  else if(currentQuestion==='descricao'){
+    voiceState.descricao=answer.charAt(0).toUpperCase()+answer.slice(1);
+  }
+  else if(currentQuestion==='pagamento'){
+    const cartoes=getCartoesList();
+    const ct=cartoes.find(c=>c.nome.toLowerCase().includes(t)||t.includes(c.nome.toLowerCase().replace('cartão ','')));
+    if(ct)voiceState.pagamento=ct.nome;
+    else if(t.includes('débit')||t.includes('debit'))voiceState.pagamento='Débito Sicredi';
+    else if(t.includes('dinheiro'))voiceState.pagamento='Dinheiro';
+    else voiceState.pagamento=answer;
+  }
+  currentQuestion=null;
+  runDialogue();
+}
+
+function showVoiceConfirm(){
+  voicePendingLanc={...voiceState};
+  const l=voicePendingLanc;
+  const cor=l.tipo==='entrada'?'var(--g)':'var(--r)';
+  const sinal=l.tipo==='entrada'?'+':'-';
+  document.getElementById('voice-mic-area').style.display='none';
+  document.getElementById('voice-confirm-area').style.display='block';
+  document.getElementById('voice-confirm-card').innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:28px">${ICONS[lanc.categoria]||'📦'}</div>
-      <div>
-        <div style="font-size:15px;font-weight:700">${lanc.descricao}</div>
-        <div style="font-size:12px;color:var(--sub)">${lanc.categoria} · ${lanc.pagamento} · ${lanc.setor==='agencia'?'Agência':'Pessoal'}</div>
+      <div style="font-size:28px">${ICONS[l.categoria]||'📦'}</div>
+      <div style="flex:1">
+        <div style="font-size:15px;font-weight:700">${l.descricao}</div>
+        <div style="font-size:12px;color:var(--sub);margin-top:2px">${l.categoria} · ${l.pagamento}</div>
       </div>
-      <div style="margin-left:auto;font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${color}">${sinal}${fmt(lanc.valor)}</div>
+      <div style="font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;color:${cor}">${sinal}${fmt(l.valor)}</div>
     </div>
-    <div style="font-size:11px;color:var(--hint);background:var(--white);padding:8px 10px;border-radius:8px;border:1px solid var(--border)">
-      💬 "${transcript}"<br>
-      <span style="color:${lanc.confianca==='alta'?'var(--g)':lanc.confianca==='media'?'var(--a)':'var(--r)'}">● ${lanc.resumo}</span>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;font-size:11px">
+      <div style="background:var(--white);padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+        <div style="color:var(--hint)">Data</div>
+        <div style="font-weight:600">${new Date(l.data+'T00:00:00').toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})}</div>
+      </div>
+      <div style="background:var(--white);padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+        <div style="color:var(--hint)">Setor</div>
+        <div style="font-weight:600">${l.setor==='agencia'?'Agência':'Pessoal'}</div>
+      </div>
+      <div style="background:var(--white);padding:6px 8px;border-radius:6px;border:1px solid var(--border)">
+        <div style="color:var(--hint)">Tipo</div>
+        <div style="font-weight:600;color:${cor}">${l.tipo==='entrada'?'Entrada':'Saída'}</div>
+      </div>
     </div>`;
-  document.getElementById('voice-preview').style.display='block';
+  addAIMessage('Tudo certo! Confirme o lançamento abaixo. ✅');
 }
 
 async function confirmVoiceLanc(){
@@ -1284,7 +1376,7 @@ async function confirmVoiceLanc(){
       data:l.data,descricao:l.descricao,categoria:l.categoria,
       pagamento:l.pagamento,tipo:l.tipo,valor:l.valor,setor:l.setor
     })});
-    toast('✓ Lançado por voz: '+l.descricao);
+    toast('✓ Lançado: '+l.descricao);
     closeVoice();
     allLancs=null;_sugHistory=[];
     if(document.getElementById('page-dash').classList.contains('active'))renderDash();
@@ -1292,6 +1384,7 @@ async function confirmVoiceLanc(){
     if(document.getElementById('page-cartoes').classList.contains('active'))renderCartoes();
   }catch(e){toast('Erro ao salvar','err');}
 }
+
 
 function updateClock(){
   const now=new Date();
