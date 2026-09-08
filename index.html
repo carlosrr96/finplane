@@ -444,8 +444,8 @@ html,body{height:100%;font-family:'Inter',sans-serif;font-size:14px;color:var(--
         <div class="g2" style="margin-bottom:14px">
           <div class="card" style="margin-bottom:0">
             <div class="card-head">
-              <div><div class="card-title">⏰ Contas do mês</div><div class="card-sub" id="bills-sub">Vencimentos nos próximos 15 dias</div></div>
-              <button class="fchip" id="bills-toggle" onclick="toggleBills()" style="padding:3px 10px;font-size:11px">Ver todas</button>
+              <div><div class="card-title">⏰ Contas do mês</div><div class="card-sub" id="bills-sub">Todas as contas do mês</div></div>
+              <button class="fchip active" id="bills-toggle" onclick="toggleBills()" style="padding:3px 10px;font-size:11px">Todas</button>
             </div>
             <div id="bills-list"></div>
           </div>
@@ -1723,13 +1723,13 @@ async function renderDash(){
   document.getElementById('dash-bottom').style.display='block';
 }
 
-let billsShowAll=false;
+let billsShowAll=true;
 function toggleBills(){
   billsShowAll=!billsShowAll;
   const btn=document.getElementById('bills-toggle');
   const sub=document.getElementById('bills-sub');
-  if(btn){btn.textContent=billsShowAll?'Ver próximas':'Ver todas';btn.classList.toggle('active',billsShowAll);}
-  if(sub){sub.textContent=billsShowAll?'Todas as contas do mês':'Vencimentos nos próximos 15 dias';}
+  if(btn){btn.textContent=billsShowAll?'Todas':'Próximas';btn.classList.toggle('active',billsShowAll);}
+  if(sub){sub.textContent=billsShowAll?'Todas as contas do mês':'Próximos 15 dias';}
   renderBillsList();
 }
 
@@ -1746,8 +1746,8 @@ function renderBillsList(){
     const vd=new Date(y2,m2,c.dia_vencimento);vd.setHours(0,0,0,0);
     const diff=Math.round((vd-today)/86400000);
     if(billsShowAll){
-      // Show all month bills
-      bills.push({...c,diff,label:diff<0?'Vencida':diff===0?'Hoje':'Em '+diff+'d'});
+      // Show ALL bills of the month regardless of date
+      bills.push({...c,diff,label:diff<0?'Vencida':diff===0?'Hoje':diff<=3?'Em '+diff+'d':'Dia '+c.dia_vencimento});
     } else {
       // Only next 15 days + overdue
       if(diff<0){bills.push({...c,diff,label:'Vencida'});return;}
