@@ -1625,48 +1625,37 @@ async function renderDash(){
   buildDespTable(lancs);
   document.getElementById('desp-card').style.display='block';
 
-  // PROXIMAS CONTAS — baseado em dias reais
+  // TODAS AS CONTAS DO MÊS
   const m2=today.getMonth(),y2=today.getFullYear();
   const bills=[];
-  contas.forEach(c=>{
-    if(!c.dia_vencimento)return;
-    // este mês
-    const vd=new Date(y2,m2,c.dia_vencimento);vd.setHours(0,0,0,0);
-    const diff=Math.round((vd-today)/86400000);
-    if(diff<0){bills.push({...c,diff,label:'Vencida'});return;}
-    if(diff<=15){bills.push({...c,diff,label:diff===0?'Hoje':'Em '+diff+'d'});return;}
-    // próximo mês
-    const vd2=new Date(y2,m2+1,c.dia_vencimento);vd2.setHours(0,0,0,0);
-    const d2=Math.round((vd2-today)/86400000);
-    if(d2<=15)bills.push({...c,diff:d2,label:'Em '+d2+'d'});
+  contas.forEach(ct=>{
+    const d=ct.dia_vencimento||0;
+    const vd=d?new Date(y2,m2,d):null;if(vd)vd.setHours(0,0,0,0);
+    const diff=vd?Math.round((vd-today)/86400000):999;
+    const label=!d?'Variável':diff<0?'Vencida':diff===0?'Hoje':diff<=3?'Em '+diff+'d':'Dia '+d;
+    bills.push({...ct,diff,label});
   });
   bills.sort((a,b)=>a.diff-b.diff);
   if(bills.some(b=>b.diff<0||b.diff<=3)){['ndot','ndot2'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='block';});}
-  // Verificar contas pagas no mês atual via lançamentos de saída
+  // Verificar contas pagas no mês atual
   const lancsSaidaMes=await api(`lancamentos?tipo=eq.saida&data=gte.${fMes}&data=lte.${tMes}`).catch(()=>[]);
   const paidBillNames={};
   lancsSaidaMes.forEach(l=>{
     const key=l.descricao.toLowerCase().trim();
     paidBillNames[key]=(paidBillNames[key]||0)+Number(l.valor);
   });
+  window._contasCache=contas;
+  window._paidBillNames=paidBillNames;
 
   document.getElementById('bills-list').innerHTML=bills.length?bills.map(b=>{
-    const vencDate=new Date(today.getFullYear(),today.getMonth(),c.dia_vencimento);
-    const vencStr=vencDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-    const paidVal=paidBillNames[c.nome.toLowerCase().trim()];
+    const vencStr=b.dia_vencimento?new Date(today.getFullYear(),today.getMonth(),b.dia_vencimento).toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'}):'—';
+    const paidVal=paidBillNames[b.nome.toLowerCase().trim()];
     const isPaid=!!paidVal;
-    const statusBadge=isPaid?`<span class="badge g">✓ Pago ${fmt(paidVal)}</span>`:c.diff<0?'<span class="badge r">Vencida</span>':c.diff===0?'<span class="badge r">Hoje</span>':c.diff<=3?`<span class="badge a">Em ${c.diff}d</span>`:`<span class="badge x">Em ${c.diff}d</span>`;
-    const icoClass=isPaid?'g':c.diff<0?'r':c.diff<=3?'a':'x';
+    const statusBadge=isPaid?`<span class="badge g">✓ Pago ${fmt(paidVal)}</span>`:b.diff<0?'<span class="badge r">Vencida</span>':b.diff===0?'<span class="badge r">Hoje</span>':b.diff<=3?`<span class="badge a">Em ${b.diff}d</span>`:b.dia_vencimento?`<span class="badge x">Dia ${b.dia_vencimento}</span>`:'<span class="badge x">Variável</span>';
     return `<div class="lrow">
-      <div class="lico ${icoClass}">${ICONS[c.categoria]||'📋'}</div>
-      <div class="lb">
-        <div class="lb-name">${c.nome}</div>
-        <div class="lb-sub">Vence dia ${c.dia_vencimento} · <strong>${vencStr}</strong></div>
-      </div>
-      <div class="lr">
-        <div class="lr-val">${c.valor>0?fmt(c.valor):'variável'}</div>
-        <div style="margin-top:3px">${statusBadge}</div>
-      </div>
+      <div class="lico ${isPaid?'g':b.diff<0?'r':b.diff<=3?'a':'x'}">${ICONS[b.categoria]||'📋'}</div>
+      <div class="lb"><div class="lb-name">${b.nome}</div><div class="lb-sub">${b.dia_vencimento?'Vence dia '+b.dia_vencimento+' · '+vencStr:'Data variável'}</div></div>
+      <div class="lr"><div class="lr-val">${b.valor>0?fmt(b.valor):'variável'}</div><div style="margin-top:3px">${statusBadge}</div></div>
     </div>`;
   }).join(''):'<div class="empty"><div class="empty-ico">✅</div><div class="empty-txt">Nenhuma conta nos próximos 15 dias</div></div>';
 
