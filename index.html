@@ -1650,7 +1650,7 @@ async function renderDash(){
     paidBillNames[key]=(paidBillNames[key]||0)+Number(l.valor);
   });
 
-  document.getElementById('bills-list').innerHTML=bills.length?bills.slice(0,8).map(c=>{
+  document.getElementById('bills-list').innerHTML=bills.length?bills.map(b=>{
     const vencDate=new Date(today.getFullYear(),today.getMonth(),c.dia_vencimento);
     const vencStr=vencDate.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
     const paidVal=paidBillNames[c.nome.toLowerCase().trim()];
